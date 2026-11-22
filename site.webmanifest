@@ -1,0 +1,13 @@
+{
+  "name": "Footy Lab",
+  "short_name": "Footy Lab",
+  "description": "Free AFL and VFL analytics.",
+  "icons": [
+    {"src": "assets/brand/icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "assets/brand/icon-512.png", "sizes": "512x512", "type": "image/png"}
+  ],
+  "theme_color": "#f1f0ec",
+  "background_color": "#f1f0ec",
+  "display": "standalone",
+  "start_url": "index.html"
+}
