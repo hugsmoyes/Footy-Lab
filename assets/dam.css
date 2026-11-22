@@ -1,0 +1,214 @@
+/* Footy Lab: shared interface
+   Loaded last on every page. Each page's own CSS still handles its layout and data views.
+   This file owns tokens, type, the header and footer, page titles, sheets, controls, focus and motion. */
+
+@font-face{font-family:"Archivo";src:url("fonts/archivo.woff2") format("woff2");font-weight:100 900;font-stretch:62% 125%;font-display:swap}
+@font-face{font-family:"Archivo Condensed";src:url("fonts/archivo-cond.woff2") format("woff2");font-weight:100 900;font-display:swap}
+@font-face{font-family:"Inter";src:url("fonts/inter.woff2") format("woff2");font-weight:100 900;font-display:swap}
+@font-face{font-family:"JetBrains Mono";src:url("fonts/jbmono.woff2") format("woff2");font-weight:100 800;font-display:swap}
+
+:root{
+  --ink:#141414; --ink-2:#3d3d3a; --muted:#6f6e69; --faint:#9c9a94;
+  --bg:#f1f0ec; --sheet:#ffffff; --tint:#f8f7f4; --line:#e3e1db; --line-2:#d2d0c9;
+  --red:#f2542d; --red-text:#c93a16; --yellow:#f6c453; --blue:#6c8cf5; --purple:#9b7bf0; --green:#1f9d55; --mint:#dff3e6;
+  --f-display:"Archivo",system-ui,sans-serif;
+  --f-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --r-sm:10px; --r:18px; --r-lg:26px;
+  --lift:0 1px 2px rgba(20,20,20,.04),0 12px 32px -18px rgba(20,20,20,.22);
+  --lift-2:0 2px 4px rgba(20,20,20,.05),0 24px 48px -24px rgba(20,20,20,.32);
+  --ease:cubic-bezier(.2,.8,.2,1);
+  --wrap:1280px;
+}
+
+/* ---------- base ---------- */
+html{-webkit-text-size-adjust:100%;scroll-padding-top:96px}
+html:has(body.dam){background:var(--bg)}
+body.dam{margin:0;color:var(--ink);font-family:var(--f-body);background:var(--bg);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:clip}
+body.dam ::selection{background:var(--yellow);color:var(--ink)}
+body.dam :focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radius:8px}
+body.dam a{text-decoration-thickness:1px;text-underline-offset:3px}
+.skip-link{position:absolute;left:12px;top:-80px;z-index:1000;background:var(--ink);color:#fff!important;padding:10px 16px;border-radius:999px;font:600 14px var(--f-body);text-decoration:none;transition:top .2s}
+.skip-link:focus{top:12px}
+.dam-k{font:500 11px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+/* ---------- header: a floating white bar ---------- */
+body.dam header.site-header{
+  position:sticky;top:0;z-index:200;display:block;margin:0!important;padding:12px 16px 0!important;max-width:none!important;width:auto!important;
+  background:linear-gradient(var(--bg) 60%,rgba(241,240,236,0));border:0;box-shadow:none;text-align:left;color:var(--ink);
+}
+.sh-bar{max-width:var(--wrap);margin:0 auto;height:58px;padding:0 10px 0 14px;display:flex;align-items:center;gap:14px;
+  background:rgba(255,255,255,.88);-webkit-backdrop-filter:blur(16px) saturate(1.4);backdrop-filter:blur(16px) saturate(1.4);
+  border:1px solid var(--line);border-radius:18px;box-shadow:var(--lift)}
+.brand{display:inline-flex;align-items:center;gap:10px;color:var(--ink)!important;text-decoration:none!important;flex:none}
+.brand .mark{width:30px;height:30px;display:block;transition:transform .5s var(--ease)}
+.brand:hover .mark{transform:rotate(-8deg) scale(1.06)}
+.brand-word{font:900 13.5px/1 var(--f-display);font-stretch:125%;letter-spacing:.01em;text-transform:uppercase;white-space:nowrap}
+body.dam nav.site-nav{display:flex;align-items:center;gap:2px;margin:0 0 0 auto;padding:0;background:none;border:0;position:static;box-shadow:none;max-width:none}
+.site-nav a{font:500 14px/1 var(--f-body);color:var(--ink-2)!important;text-decoration:none!important;padding:10px 12px;border-radius:10px;transition:background .15s,color .15s}
+.site-nav a:hover{background:var(--bg);color:var(--ink)!important}
+.site-nav a[aria-current="page"]{background:var(--bg);color:var(--ink)!important;font-weight:650;box-shadow:inset 0 0 0 1px var(--line)}
+.site-nav .nav-x{font:500 12px/1 var(--f-mono);color:var(--muted)!important}
+.site-nav .nav-cta{margin-left:6px;background:var(--ink);color:#fff!important;padding:11px 16px;border-radius:12px;font-weight:600}
+.site-nav .nav-cta:hover{background:#000;color:#fff!important}
+.nav-toggle{display:none;margin-left:auto;align-items:center;gap:8px;font:600 14px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:9px 13px;cursor:pointer}
+.nav-toggle .bars{position:relative;width:14px;height:1.5px;background:var(--ink);display:inline-block}
+.nav-toggle .bars::before,.nav-toggle .bars::after{content:"";position:absolute;left:0;width:14px;height:1.5px;background:var(--ink);transition:transform .2s}
+.nav-toggle .bars::before{top:-4.5px}.nav-toggle .bars::after{top:4.5px}
+.nav-toggle[aria-expanded="true"] .bars{background:transparent}
+.nav-toggle[aria-expanded="true"] .bars::before{transform:translateY(4.5px) rotate(45deg)}
+.nav-toggle[aria-expanded="true"] .bars::after{transform:translateY(-4.5px) rotate(-45deg)}
+@media (max-width:900px){
+  .nav-toggle{display:inline-flex}
+  body.dam nav.site-nav{display:none;position:absolute;left:16px;right:16px;top:calc(100% + 8px);flex-direction:column;align-items:stretch;gap:2px;padding:8px;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--lift-2)}
+  body.dam nav.site-nav.open{display:flex;animation:dam-sheet .28s var(--ease)}
+  .site-nav a{padding:14px 14px;font-size:16px}
+  .site-nav .nav-cta{margin:6px 0 0;text-align:center}
+  body.dam header.site-header{padding:8px 10px 0!important}
+  .sh-bar{height:54px}
+}
+@media (max-width:400px){.brand-word{font-size:11.5px}.brand .mark{width:26px;height:26px}}
+
+/* ---------- footer: a white sheet with the big wordmark ---------- */
+body.dam footer.site-footer{display:block;margin:88px 0 0!important;max-width:none!important;width:auto!important;padding:0 16px 16px!important;background:transparent;color:var(--ink);border:0;text-align:left;font-family:var(--f-body)}
+.sf-sheet{max-width:var(--wrap);margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--lift)}
+.sf-top{position:relative;display:grid;grid-template-columns:1.5fr 1fr 1fr 150px;gap:32px;padding:40px 36px 18px}
+.sf-tag{margin:18px 0 6px;font:900 22px/1.05 var(--f-display);font-stretch:118%;letter-spacing:-.01em;text-transform:uppercase}
+.sf-note{margin:0;font:500 11px/1.5 var(--f-mono);letter-spacing:.03em;color:var(--muted);max-width:36ch}
+.sf-col h2{margin:6px 0 14px;font:500 11px/1 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.sf-col a{display:block;width:fit-content;margin:0 0 10px;color:var(--ink-2)!important;text-decoration:none;font:500 14.5px/1.3 var(--f-body)}
+.sf-col a:hover{color:var(--ink)!important;text-decoration:underline}
+.sf-badge{width:128px;height:128px;justify-self:end}
+.sf-word{padding:6px 28px 0;font:900 clamp(26px,6vw,86px)/.84 var(--f-display);font-stretch:125%;letter-spacing:-.02em;text-transform:uppercase;white-space:nowrap;color:var(--ink);overflow:hidden}
+.sf-base{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:18px;padding:16px 36px 20px;border-top:1px solid var(--line);font:500 11px/1.4 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+@media (max-width:900px){.sf-top{grid-template-columns:1fr 1fr;padding:32px 22px 10px}.sf-brand{grid-column:1/-1}.sf-badge{position:absolute;right:18px;top:22px;width:84px;height:84px}.sf-word{padding:6px 16px 0;font-size:clamp(20px,6.4vw,60px)}.sf-base{padding:14px 22px 18px}}
+@keyframes dam-spin{to{transform:rotate(360deg)}}
+
+/* ---------- page title: an editorial poster sheet ---------- */
+body.dam .dam-hero{
+  position:relative;display:block;box-sizing:border-box;margin:22px 0 26px;padding:30px 34px 30px;
+  background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--lift);text-align:left;color:var(--ink);overflow:hidden;isolation:isolate;
+}
+body.dam .dam-hero::after{content:"";position:absolute;right:-36px;top:-36px;width:260px;height:260px;z-index:-1;background:url("brand/fl-construction.svg") center/contain no-repeat;opacity:.14;pointer-events:none}
+.dam-pin{display:inline-flex;align-items:center;gap:8px;margin:0 0 26px;padding:6px 11px 6px 9px;border:1px solid var(--ink);border-radius:999px;font:600 10.5px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink)}
+.dam-pin::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--red)}
+body.dam .dam-hero h1{font-family:var(--f-display)!important;font-stretch:118%;font-weight:900!important;font-size:clamp(34px,5.4vw,72px)!important;line-height:.9!important;letter-spacing:-.025em!important;color:var(--ink)!important;margin:0 0 18px!important;text-transform:uppercase!important;max-width:16ch}
+body.dam .dam-hero h1 span,body.dam .dam-hero h1 em{color:var(--red-text)!important;font-style:normal}
+body.dam .dam-hero .badge{display:inline-flex;align-items:center;font:500 11px/1 var(--f-mono)!important;letter-spacing:.06em!important;text-transform:uppercase;color:var(--muted)!important;background:var(--bg)!important;border:0!important;border-radius:8px!important;padding:7px 10px!important;margin:0 0 14px}
+body.dam .dam-hero .meta,body.dam .dam-hero .sub,body.dam .dam-hero .intro{color:var(--ink-2)!important;font-family:var(--f-body)!important;font-size:15.5px;line-height:1.55;max-width:68ch}
+body.dam .dam-hero .meta{font:500 11.5px/1.7 var(--f-mono)!important;letter-spacing:.03em;text-transform:uppercase;color:var(--muted)!important;padding-top:14px;border-top:1px solid var(--line);max-width:none}
+body.dam.p-profile .dam-hero{background:#fff linear-gradient(180deg,var(--mint),#fff 70%)}
+body.dam.p-article .dam-hero,body.dam.p-method .dam-hero{background:#fff linear-gradient(180deg,#fff4dc,#fff 70%)}
+@media (max-width:700px){
+  body.dam .dam-hero{padding:22px 18px 22px;margin:14px 0 18px;border-radius:20px}
+  body.dam .dam-hero::after{width:150px;height:150px;right:-30px;top:-30px}
+  .dam-pin{margin-bottom:18px}
+}
+
+/* ---------- sheets ---------- */
+body.dam .panel,body.dam .radar-col,body.dam .card:not(.tile),body.dam .t25card,body.dam .board{border:1px solid var(--line)!important;border-radius:var(--r)!important;box-shadow:var(--lift)!important;background:var(--sheet)}
+body.dam .gcard,body.dam .sim-card{border-radius:12px}
+
+/* ---------- controls ---------- */
+body.dam input[type="text"],body.dam input[type="search"],body.dam select{font-family:var(--f-body);color:var(--ink);background-color:#fff;border:1px solid var(--line-2)!important;border-radius:12px!important;transition:border-color .15s,box-shadow .15s}
+body.dam input[type="text"]:hover,body.dam input[type="search"]:hover,body.dam select:hover{border-color:var(--faint)!important}
+body.dam input[type="text"]:focus,body.dam input[type="search"]:focus,body.dam select:focus{border-color:var(--ink)!important;box-shadow:0 0 0 4px rgba(20,20,20,.08);outline:none}
+body.dam input[type="text"]::placeholder,body.dam input[type="search"]::placeholder{color:var(--faint)}
+body.dam input[type="range"],body.dam input[type="checkbox"],body.dam input[type="radio"]{accent-color:var(--ink)}
+body.dam button{font-family:inherit;cursor:pointer}
+body.dam .chip,body.dam .fbt,body.dam .tg,body.dam .ybtn,body.dam .yrtab,body.dam .ibtn,body.dam .ytab{border-radius:10px!important;transition:background .15s,color .15s,border-color .15s}
+body.dam .chip:not(.on):hover,body.dam .fbt:not(.on):hover,body.dam .tg:not(.on):hover,body.dam .ybtn:not(.on):hover,body.dam .yrtab:not(.on):hover,body.dam .mbt:not(.on):hover{color:var(--ink)!important;background-color:var(--bg)!important}
+body.dam .fbt.on,body.dam .mbt.on,body.dam .tg.on,body.dam .chip.on,body.dam .ybtn.on,body.dam .tab.on,body.dam .yrtab.on,body.dam .ibtn.on,body.dam .ytab[aria-pressed="true"]{background:var(--ink)!important;color:#fff!important;border-color:var(--ink)!important}
+
+/* tables */
+body.dam table{font-variant-numeric:tabular-nums}
+body.dam table th{font-family:var(--f-mono)!important;font-weight:500!important;font-size:10.5px!important;letter-spacing:.06em!important;text-transform:uppercase;color:var(--muted)}
+body.dam table tbody tr:hover td{background-color:var(--tint)}
+body.dam .tip,body.dam .tray,body.dam .tt,body.dam .tooltip{border-radius:12px}
+
+/* ---------- page types ---------- */
+body.dam.p-article .page{max-width:780px}
+body.dam.p-article .page p{font-size:17.5px;line-height:1.72;color:var(--ink-2)}
+body.dam.p-article .page h2,body.dam.p-method .page h2{font-family:var(--f-display)!important;font-stretch:118%;font-weight:900!important;letter-spacing:-.01em!important;text-transform:uppercase!important;color:var(--ink)!important}
+body.dam.p-method .page h3{font-family:var(--f-display)!important;font-stretch:112%;font-weight:800!important;text-transform:none!important}
+
+/* ---------- motion: sheets "print" in, like a receipt from a slot ---------- */
+@keyframes dam-print{from{clip-path:inset(0 0 100% 0 round var(--r-lg));transform:translateY(-6px)}to{clip-path:inset(0 0 0 0 round var(--r-lg));transform:none}}
+@keyframes dam-sheet{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:no-preference){
+  body.dam .dam-hero{animation:dam-print .7s var(--ease) both}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+}
+@media print{body.dam header.site-header,body.dam footer.site-footer,.skip-link{display:none!important}body.dam{background:#fff}}
+
+/* ===================================================================
+   Colour pass: more colour and contrast, the site's green is back.
+   =================================================================== */
+:root{
+  --green:#1f9d55; --green-deep:#137a40; --green-ink:#0d4f2b; --mint:#d9f1e2;
+  --bg:#ecebe5; --line:#dcdad2; --line-2:#c9c6bd; --muted:#5f5e59; --ink-2:#2f2f2c;
+  --stripes:repeating-linear-gradient(90deg,rgba(255,255,255,.045) 0 46px,transparent 46px 92px);
+}
+html:has(body.dam){background:var(--bg)}
+body.dam{background:var(--bg)}
+body.dam ::selection{background:var(--yellow)}
+body.dam header.site-header{background:linear-gradient(var(--bg) 60%,rgba(236,235,229,0))}
+.sh-bar{border-color:var(--line)}
+.site-nav a[aria-current="page"]{background:var(--mint);color:var(--green-ink)!important;box-shadow:inset 0 0 0 1px #b9e2c8}
+.site-nav .nav-cta{background:var(--green-deep)}
+.site-nav .nav-cta:hover{background:var(--green-ink)}
+
+/* page titles: deep green poster sheet, white type, yellow highlight */
+body.dam .dam-hero{background:var(--green-deep) var(--stripes);border-color:var(--green-deep);color:#fff;box-shadow:0 2px 4px rgba(13,79,43,.12),0 22px 44px -24px rgba(13,79,43,.55)}
+body.dam .dam-hero::after{filter:invert(1);opacity:.16}
+body.dam .dam-hero h1{color:#fff!important}
+body.dam .dam-hero h1 span,body.dam .dam-hero h1 em{color:var(--yellow)!important}
+body.dam .dam-hero .dam-pin{border-color:rgba(255,255,255,.75);color:#fff}
+body.dam .dam-hero .dam-pin::before{background:var(--yellow)}
+body.dam .dam-hero .badge{background:rgba(255,255,255,.14)!important;color:#fff!important}
+body.dam .dam-hero .meta{color:rgba(255,255,255,.82)!important;border-top-color:rgba(255,255,255,.22)}
+body.dam .dam-hero .sub,body.dam .dam-hero .intro,body.dam .dam-hero p{color:rgba(255,255,255,.92)!important}
+body.dam .dam-hero a{color:#fff!important}
+body.dam.p-profile .dam-hero{background:var(--green-deep) var(--stripes)}
+body.dam.p-article .dam-hero,body.dam.p-method .dam-hero{background:var(--ink);border-color:var(--ink);box-shadow:0 22px 44px -24px rgba(0,0,0,.55)}
+
+/* controls: green when active */
+body.dam .fbt.on,body.dam .mbt.on,body.dam .tg.on,body.dam .chip.on,body.dam .ybtn.on,body.dam .tab.on,body.dam .yrtab.on,body.dam .ibtn.on,body.dam .ytab[aria-pressed="true"]{background:var(--green-deep)!important;border-color:var(--green-deep)!important;color:#fff!important}
+body.dam input[type="text"]:focus,body.dam input[type="search"]:focus,body.dam select:focus{border-color:var(--green-deep)!important;box-shadow:0 0 0 4px rgba(31,157,85,.2)}
+body.dam input[type="range"],body.dam input[type="checkbox"],body.dam input[type="radio"]{accent-color:var(--green-deep)}
+body.dam :focus-visible{outline-color:var(--green-deep)}
+body.dam table tbody tr:hover td{background-color:#eef8f1}
+body.dam .panel,body.dam .radar-col,body.dam .card:not(.tile),body.dam .t25card,body.dam .board{border-color:var(--line)!important}
+
+/* footer: deep green block */
+.sf-sheet{background:var(--green-ink) var(--stripes);border-color:var(--green-ink);color:#fff}
+.site-footer .brand{color:#fff!important}
+.site-footer .brand .mark{filter:invert(1)}
+.sf-tag{color:#fff}
+.sf-tag::first-line{color:#fff}
+.sf-note{color:rgba(255,255,255,.7)}
+.sf-col h2{color:rgba(255,255,255,.55)}
+.sf-col a{color:rgba(255,255,255,.92)!important}
+.sf-col a:hover{color:var(--yellow)!important}
+.sf-word{color:var(--yellow)}
+.sf-base{border-top-color:rgba(255,255,255,.16);color:rgba(255,255,255,.6)}
+
+/* player names link to their profile */
+a.plink{color:inherit!important;text-decoration:none!important;cursor:pointer}
+a.plink:hover,a.plink:focus-visible{text-decoration:underline!important;text-decoration-color:var(--green)!important;text-decoration-thickness:2px!important;text-underline-offset:3px}
+.pc a.plink{display:block}
+
+/* Player profiles: profile / radar / AFL match views (the radar tools live inside the profile pages) */
+.view-tabs{display:inline-flex;flex-wrap:wrap;gap:2px;padding:3px;margin:0 0 14px;border-radius:12px;background:#fff;border:1px solid var(--line);box-shadow:var(--lift)}
+.view-tabs button{border:0;background:transparent;color:var(--muted);font:600 13.5px/1 var(--f-body);padding:10px 14px;border-radius:9px;cursor:pointer;transition:background .15s,color .15s}
+.view-tabs button:hover{color:var(--ink);background:var(--bg)}
+.view-tabs button[aria-pressed="true"]{background:var(--green-deep);color:#fff}
+.tool-pane[hidden]{display:none}
+.tool-note{margin:0 0 10px;font:500 11.5px/1.5 var(--f-mono);color:var(--muted)}
+.tool-pane iframe{display:block;width:100%;min-height:600px;border:0;border-radius:var(--r);background:var(--bg)}
+html.dam-embed,html.dam-embed body.dam{background:transparent!important}
+html.dam-embed .site-header,html.dam-embed .site-footer,html.dam-embed .skip-link,html.dam-embed .dam-hero,html.dam-embed .lg-tabs{display:none!important}
+html.dam-embed body.dam{padding-top:0!important}
+body.dam .ctrl-row[hidden],body.dam #prof[hidden]{display:none!important}
