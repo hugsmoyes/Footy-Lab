@@ -73,6 +73,13 @@
   }
   function undo() { const c = st(); const id = c.recent[0]; const e = id && M.event(id); if (!e) return; if (confirm(`Remove the last event (Q${e.period} ${e.clock})?`)) { c.recent.shift(); M.removeEvent(id); } }
   function mark() { const c = st(), v = document.getElementById('codeVid'); c.mark = { clock: U.fmtClock(now()), video: v && v.readyState > 0 ? v.currentTime : null }; U.toast(`Marked Q${c.period} ${c.mark.clock}`); Lab.render(); }
+  /* Next chain number: one more than the highest used in this match and template, or the current value. */
+  function nextChain() {
+    const f = tpl().fields.find(x => x.type === 'chain'), m = match(); if (!f || !m) return;
+    const used = M.state.events.filter(e => e.matchId === m.id && e.templateId === tpl().id).map(e => parseFloat(e.v[f.key])).filter(n => !isNaN(n));
+    const cur = parseFloat(get(f.key)), top = Math.max(0, ...used, isNaN(cur) ? 0 : cur);
+    set(f.key, String(top + 1)); U.toast(`Chain ${top + 1}`); Lab.render();
+  }
   function switchTeam() { const m = match(); if (!m) return; const c = st(); c.team = (c.team || m.home) === m.home ? m.away : m.home; Lab.render(); }
 
   document.addEventListener('keydown', ev => {
@@ -97,6 +104,7 @@
     const usesLetters = choiceLike && opts(f).length > 10;
     if (k === 't' && !usesLetters) { switchTeam(); return; }
     if (k === 'm' && !usesLetters) { mark(); return; }
+    if (k === 'n' && tpl().fields.some(x => x.type === 'chain')) { ev.preventDefault(); nextChain(); return; }
     if (choiceLike) { const i = KEYS.indexOf(k); if (i >= 0 && i < opts(f).length) { ev.preventDefault(); set(f.key, opts(f)[i]); advance(); Lab.render(); return; } }
     if (f && !choiceLike && /^[\w\-.#]$/.test(ev.key)) { const inp = document.querySelector(`[data-fk="${f.key}"]`); if (inp) inp.focus(); }
   });
@@ -119,8 +127,9 @@
       const shown = v && M.player(v) ? (M.player(v).number ? M.player(v).number + ' ' : '') + M.player(v).name : (v || '');
       ctl = `<input data-fk="${f.key}" list="pl_${f.key}" value="${U.esc(shown)}" placeholder="${U.esc(tm ? tm + ': number or name' : 'number or name')}"><datalist id="pl_${f.key}">${ros.map(p => `<option value="${U.esc((p.number ? p.number + ' ' : '') + p.name)}">`).join('')}</datalist>`;
     } else {
-      ctl = `<input data-fk="${f.key}" value="${U.esc(v == null ? '' : v)}" ${['number', 'margin', 'chain'].includes(f.type) ? 'inputmode="numeric"' : ''} placeholder="${f.type === 'margin' ? 'e.g. -12' : f.type === 'chain' ? 'chain no.' : ''}">`;
+      ctl = `<input data-fk="${f.key}" value="${U.esc(v == null ? '' : v)}" ${['number', 'margin', 'chain'].includes(f.type) ? 'inputmode="numeric"' : ''} placeholder="${f.type === 'margin' ? 'e.g. -12' : f.type === 'chain' ? 'chain no.' : ''}">${f.type === 'chain' ? `<button type="button" class="btn sm" data-nextchain title="Start the next chain (N)">Next chain <kbd>N</kbd></button>` : ''}`;
     }
+    if (f.type === 'chain') ctl = `<div class="chain-in">${ctl}</div>`;
     return `<div class="cf${active ? ' active' : ''}${filled ? ' filled' : ''}" data-row="${isSeq ? i : ''}"><span class="cf-l">${U.esc(f.label)}${f.required ? ' *' : ''}${f.type === 'player' && f.side ? `<em>${f.side === 'against' ? 'opposition' : f.side === 'any' ? 'either team' : 'coded team'}</em>` : ''}</span>${ctl}</div>`;
   }
 
@@ -194,7 +203,7 @@
             <div style="margin-top:12px">${fs.map((f, i) => row(f, i, true)).join('')}</div>
             ${sticky().length ? `<details class="sticky-grp" ${(vs.stickyOpen != null ? vs.stickyOpen : sticky().some(f => !get(f.key))) ? 'open' : ''} id="stickyD"><summary>Carries over between events (${sticky().filter(f => get(f.key)).length}/${sticky().length} set)${sticky().some(f => get(f.key)) ? ': ' + U.esc(sticky().map(f => get(f.key)).filter(Boolean).map(x => M.playerName(x)).join(', ')) : ''}</summary>${sticky().map(f => row(f, -1, false)).join('')}</details>` : ''}
             <div class="ctl" style="margin-top:12px"><button class="btn g" id="cSave">Save event <kbd class="inv">Enter</kbd></button><button class="btn" id="cClear">Clear <kbd>Esc</kbd></button><button class="btn" id="cMark">Mark <kbd>M</kbd></button><button class="btn" id="cUndo" ${c.recent.length ? '' : 'disabled'}>Undo last</button></div>
-            <details class="keys-d"><summary>Keyboard shortcuts</summary><div class="keys"><span><kbd>1</kbd>–<kbd>9</kbd> pick and move on</span><span><kbd>↑</kbd><kbd>↓</kbd> fields</span><span><kbd>Backspace</kbd> clear field</span><span><kbd>T</kbd> switch team</span><span><kbd>Space</kbd> clock</span><span><kbd>M</kbd> mark moment</span><span><kbd>Enter</kbd> save</span><span><kbd>Ctrl</kbd>+<kbd>Enter</kbd> save from a text box</span></div></details>`}
+            <details class="keys-d"><summary>Keyboard shortcuts</summary><div class="keys"><span><kbd>1</kbd>–<kbd>9</kbd> pick and move on</span><span><kbd>↑</kbd><kbd>↓</kbd> fields</span><span><kbd>Backspace</kbd> clear field</span><span><kbd>T</kbd> switch team</span><span><kbd>Space</kbd> clock</span><span><kbd>M</kbd> mark moment</span>${tpl().fields.some(x => x.type === 'chain') ? '<span><kbd>N</kbd> next chain</span>' : ''}<span><kbd>Enter</kbd> save</span><span><kbd>Ctrl</kbd>+<kbd>Enter</kbd> save from a text box</span></div></details>`}
         </section>
         <div class="grid">
           ${m ? `<section class="card"><div class="card-h"><div><h3>Video</h3><p>Saved events take the current video time.</p></div></div>
@@ -228,6 +237,7 @@
         U.$$('[data-set]', el).forEach(b => b.onclick = () => { const k = b.dataset.set, v = b.dataset.val; set(k, get(k) === v ? '' : v); const i = fs.findIndex(f => f.key === k); if (i >= 0) { c.active = i; if (get(k)) advance(); } Lab.render(); });
         U.$$('[data-fk]', el).forEach(inp => { inp.onchange = () => set(inp.dataset.fk, inp.value); inp.onfocus = () => { const i = fs.findIndex(f => f.key === inp.dataset.fk); if (i >= 0) c.active = i; }; });
         U.$('#cSave', el).onclick = save; U.$('#cClear', el).onclick = () => { clear(); Lab.render(); };
+        U.$$('[data-nextchain]', el).forEach(b => b.onclick = nextChain);
         U.$('#cMark', el).onclick = mark; U.$('#cUndo', el).onclick = undo;
         const sd = U.$('#stickyD', el); if (sd) sd.ontoggle = () => { vs.stickyOpen = sd.open; };
         const cf = U.$('#cFile', el); if (cf) cf.onchange = e => { const f = e.target.files[0]; if (!f) return; if (Lab.localVideos[m.id]) URL.revokeObjectURL(Lab.localVideos[m.id].url); Lab.localVideos[m.id] = { url: URL.createObjectURL(f), name: f.name }; M.setVideo(m.id, { fileName: f.name }); };
