@@ -33,11 +33,16 @@ jobs:
         uses: actions/checkout@v6
       - name: Setup Pages
         uses: actions/configure-pages@v5
+      # Publish the site only: leave out build scripts, notes and raw data files.
+      - name: Collect site files
+        run: |
+          mkdir _site
+          tar --exclude='./.git' --exclude='./.github' --exclude='./_site' --exclude='./tools' \
+              --exclude='*.md' --exclude='*.py' --exclude='*.csv' -cf - . | tar -xf - -C _site
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5
         with:
-          # Upload entire repository
-          path: '.'
+          path: '_site'
       # GitHub sometimes reports "No artifacts named github-pages were found" right after
       # the upload. Waiting and trying again fixes it, so retry automatically up to twice.
       - name: Deploy to GitHub Pages
