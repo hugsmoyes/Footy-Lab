@@ -187,7 +187,7 @@
     state.playlists.concat(tl.playlists).forEach(p => { p.clipIds = p.clipIds.filter(x => !gone.has(x)); });
     const revs = new Set(tl.reviews.filter(r => r.matchId === id).map(r => r.id));
     tl.reviews = tl.reviews.filter(r => !revs.has(r.id));
-    tl.findings.forEach(f => { if (revs.has(f.reviewId)) f.reviewId = ''; f.matchIds = (f.matchIds || []).filter(x => x !== id); });
+    tl.findings.forEach(f => { if (revs.has(f.reviewId)) f.reviewId = ''; if (f.week === id) f.week = ''; f.matchIds = (f.matchIds || []).filter(x => x !== id); });
     delete state.videos[id];
     emit('matches');
   }
@@ -322,7 +322,8 @@
   function removeReview(id) { tl.reviews = tl.reviews.filter(r => r.id !== id); tl.findings = tl.findings.filter(f => f.reviewId !== id); emit('reviews'); }
 
   /* ---------- findings ----------
-     reviewId '' = a season-level finding; otherwise it belongs to that match review.
+     Two horizons. Weekly: tied to one match week, either through its match review (reviewId) or
+     as a note for that week (week = the match id). Season: neither, so a longer-term finding.
      Observation and evidence (what the data shows) are kept apart from interpretation (opinion),
      the review question (what to check or discuss) and the follow-up focus. */
   const FSTATUS = ['Draft', 'Ready for report'];
@@ -340,8 +341,14 @@
   function wsFindings(reviewId) {
     const id = curId();
     if (mode() === 'opp') return state.findings.filter(f => f.workspaceId === id);
-    return tl.findings.filter(f => f.workspaceId === id && (reviewId === undefined || (f.reviewId || '') === reviewId));
+    return tl.findings.filter(f => f.workspaceId === id && (reviewId === undefined || ((f.reviewId || '') === reviewId && (reviewId !== '' || !f.week))));
   }
+  /* The match week a team finding belongs to: a match id, or '' for a season finding. */
+  function weekOf(f) {
+    if (f.reviewId) { const r = review(f.reviewId); return r ? r.matchId : ''; }
+    return f.week || '';
+  }
+  function weekFindings(matchId) { return wsFindings().filter(f => weekOf(f) === matchId); }
   function finding(id) { return tl.findings.find(x => x.id === id) || state.findings.find(x => x.id === id) || null; }
   function addFinding(f) {
     if (mode() === 'opp') {
@@ -352,15 +359,16 @@
       id: U.uid('tf'), workspaceId: tl.workspaceId, reviewId: '', createdAt: new Date().toISOString(),
       title: '', observation: '', stat: '', n: null, matchIds: [], source: '', chart: null, hideChart: false,
       eventIds: [], clipIds: [], interpretation: '', question: '', followUp: '', followOwner: '', followWhen: '', followStatus: 'Open',
-      evidenceStatus: '', focus: '', limitations: '', status: 'Draft', inReport: true
+      evidenceStatus: '', focus: '', limitations: '', status: 'Draft', inReport: true, week: ''
     }, f);
+    if (x.reviewId) x.week = '';
     tl.findings.push(x); emit('findings'); return x;
   }
   function updateFinding(id, patch) { const f = finding(id); if (f) { Object.assign(f, patch); emit('findings'); } }
   function removeFinding(id) { tl.findings = tl.findings.filter(f => f.id !== id); state.findings = state.findings.filter(f => f.id !== id); emit('findings'); }
   function moveFinding(id, dir) {
     const f0 = finding(id); if (!f0) return;
-    const list = wsFindings(f0.reviewId || ''), i = list.findIndex(f => f.id === id), j = i + dir;
+    const list = mode() === 'opp' ? wsFindings() : wsFindings().filter(f => weekOf(f) === weekOf(f0)), i = list.findIndex(f => f.id === id), j = i + dir;
     if (i < 0 || j < 0 || j >= list.length) return;
     const arr = fstore(), a = arr.indexOf(list[i]), b = arr.indexOf(list[j]);
     [arr[a], arr[b]] = [arr[b], arr[a]];
@@ -400,7 +408,7 @@
     template, saveTemplate, removeTemplate, restoreStarters, event, addEvent, updateEvent, removeEvent,
     setVideo, addClip, updateClip, removeClip, playlists, playlist, addPlaylist, updatePlaylist, removePlaylist,
     reviews, review, reviewFor, addReview, updateReview, removeReview,
-    wsFindings, finding, addFinding, updateFinding, removeFinding, moveFinding,
+    wsFindings, weekOf, weekFindings, finding, addFinding, updateFinding, removeFinding, moveFinding,
     exportAll, readBackup, restore, reset
   };
 })(window.Lab);
