@@ -390,7 +390,7 @@
       ${!S.rv ? `<h2>Matches reviewed</h2>${seasonBlock(ws)}` : ''}
       <h2>Findings</h2>${items.length ? items.map(findingHTML).join('') : '<p class="muted">No findings selected for the report yet.</p>'}
       ${opt(meta, 'followups') && followRows(items) ? `<h2>Follow-up list</h2>${followRows(items)}` : ''}
-      ${opt(meta, 'clips') && allClips.length ? `<h2>Clips referenced</h2><ol class="small">${allClips.map(c => `<li>${U.esc(clipLine(c))}</li>`).join('')}</ol><p class="small muted">Clips are in and out points on the club's own match video. Team Lab doesn't host or edit video.</p>` : ''}
+      ${opt(meta, 'clips') && allClips.length ? `<h2>Clips referenced</h2><ol class="small">${allClips.map(c => `<li>${U.esc(clipLine(c))}</li>`).join('')}</ol><p class="small muted">Clips are in and out points on the club's own match video. Club Lab doesn't host or edit video.</p>` : ''}
       <p class="caveat">${CAVEAT}</p></article>`;
   }
   function markdown(ws, S) {

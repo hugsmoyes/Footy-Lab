@@ -84,7 +84,7 @@
       <section class="sec card"><h2>Where your data lives</h2>
         <div class="grid g2" style="margin-top:8px">
           <ul class="notes-list">
-            <li><b>Our team</b>Team seasons, match reviews, findings, follow-ups, report settings and playlists: this browser's local storage on this device, key <code>${U.esc(M.TKEY)}</code> (${Math.round(M.bytes('tl') / 1024)} KB). The same key Team Lab used.</li>
+            <li><b>Our team</b>Team seasons, match reviews, findings, follow-ups, report settings and playlists: this browser's local storage on this device, key <code>${U.esc(M.TKEY)}</code> (${Math.round(M.bytes('tl') / 1024)} KB). The same key the old Team Lab used.</li>
             <li><b>Opponent and the match library</b>Fixtures, briefs and their findings, plus matches, players, stat definitions, imported team and player stats, coding templates, coded events, video links, timestamps and clips: key <code>${U.esc(M.KEY)}</code> (${Math.round(M.bytes() / 1024)} KB), the same key Opponent Lab used. ${(() => { const L = M.libraryInfo(); return `It holds ${L.fixtures} fixture${L.fixtures === 1 ? '' : 's'}, ${L.matches} matches, ${L.events} coded events and ${L.clips} clips.`; })()}</li>
             <li><b>Built-in season data</b>Read from the data files in this folder. Never written to storage.</li>
           </ul>

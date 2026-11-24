@@ -21,6 +21,7 @@
   var file = decodeURIComponent(location.pathname.split('/').pop() || 'index.html');
   var key = /players/.test(file) ? 'players'
     : /^about/.test(file) ? 'about'
+    : /^club-lab/.test(file) ? 'lab'
     : /^(article-|centre-ball-ups)/.test(file) ? 'deep-dives'
     : /^index|^$/.test(file) ? null : 'tools';
   if (key) {

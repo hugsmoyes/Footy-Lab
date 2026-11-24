@@ -165,7 +165,7 @@
     if (v.url) parts.push(/youtu/.test(v.url) ? 'YouTube link saved. The video stays on YouTube.' : /\.(mp4|m4v|webm|mov|ogg)(\?|#|$)/i.test(v.url) ? 'Direct video link saved. The file stays where it is hosted.' : 'Link saved (opens in a new tab). The video stays where it is hosted.');
     if (timed) parts.push(`${timed} coded event${timed === 1 ? '' : 's'} with a confirmed video time.`);
     if (clips) parts.push(`${clips} clip${clips === 1 ? '' : 's'} (in and out points only; no new video file is made).`);
-    return { any: !!(local || v.fileName || v.url || timed || clips), linked: !!v.url, local: !!local, timed, clips, text: parts.join(' ') || 'No video linked. Team Lab never hosts or edits video: it saves links, file names and timestamps.' };
+    return { any: !!(local || v.fileName || v.url || timed || clips), linked: !!v.url, local: !!local, timed, clips, text: parts.join(' ') || 'No video linked. Club Lab never hosts or edits video: it saves links, file names and timestamps.' };
   };
   /* Six rows: what this match has, and what to do when something is missing. */
   MD.coverage = function (m, team, rv) {
@@ -193,7 +193,7 @@
     out.push(lu ? { id: 'lineups', label: 'Line-ups', state: lu.derived ? 'part' : 'ok', text: `${lu.n} players for ${team}.`, src: lu.src, acts: lu.derived ? [['lineups', 'Tick the team sheet']] : [] }
       : { id: 'lineups', label: 'Line-ups', state: 'none', text: 'Who played is not recorded.', acts: [['lineups', 'Tick who played']] });
     const ev = M.state.events.filter(e => e.matchId === m.id), evUs = ev.filter(e => e.team === team).length, tpls = new Set(ev.map(e => e.templateId)).size;
-    out.push(ev.length ? { id: 'events', label: 'Coded events', state: 'ok', text: `${ev.length} events (${evUs} coded for us, ${ev.length - evUs} for ${opp}) across ${tpls} template${tpls === 1 ? '' : 's'}.`, src: 'Coded by staff (Team Lab or Opponent Lab)' }
+    out.push(ev.length ? { id: 'events', label: 'Coded events', state: 'ok', text: `${ev.length} events (${evUs} coded for us, ${ev.length - evUs} for ${opp}) across ${tpls} template${tpls === 1 ? '' : 's'}.`, src: 'Coded by staff in Club Lab' }
       : { id: 'events', label: 'Coded events', state: 'opt', text: 'Nothing coded. Optional: the review works from stats alone.', acts: [['code', 'Code this match'], ['import:events', 'Import events']] });
     const vs = MD.videoStatus(m);
     out.push({ id: 'video', label: 'Video links and timestamps', state: vs.any ? 'ok' : 'opt', text: vs.text, src: vs.any ? 'Saved in this browser' : '', acts: [['video', vs.any ? 'Open video' : 'Add a link or local file']] });

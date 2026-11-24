@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How Club Lab works · Footy Lab</title>
+<meta name="description" content="Club Lab is a free match analysis workspace for AFL and VFL clubs. Review your own games, scout the next opponent and turn the numbers into a report for coaches.">
+<!-- link previews -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Footy Lab">
+<meta property="og:title" content="How Club Lab works · Footy Lab">
+<meta property="og:description" content="Club Lab is a free match analysis workspace for AFL and VFL clubs. Review your own games, scout the next opponent and turn the numbers into a report for coaches.">
+<meta property="og:url" content="https://hugsmoyes.github.io/footy-lab/club-lab.html">
+<meta property="og:image" content="https://hugsmoyes.github.io/footy-lab/assets/shots/lab-review.jpg">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="720">
+<meta property="og:image:alt" content="Club Lab match review of Box Hill v Williamstown, VFL 2026">
+<meta property="og:locale" content="en_AU">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@HugoMoyesAFL">
+<meta name="twitter:title" content="How Club Lab works · Footy Lab">
+<meta name="twitter:description" content="Club Lab is a free match analysis workspace for AFL and VFL clubs. Review your own games, scout the next opponent and turn the numbers into a report for coaches.">
+<meta name="twitter:image" content="https://hugsmoyes.github.io/footy-lab/assets/shots/lab-review.jpg">
+<meta name="twitter:image:alt" content="Club Lab match review of Box Hill v Williamstown, VFL 2026">
+<link rel="canonical" href="https://hugsmoyes.github.io/footy-lab/club-lab.html">
+<!-- /link previews -->
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon.ico" sizes="48x48">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#f1f0ec">
+<link rel="preload" href="assets/fonts/archivo.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/dam.css">
+<style>
+.cl{max-width:1180px;margin:0 auto;padding:0 20px}
+.cl-hero{margin:18px 0 0;background:var(--green-deep);color:#fff;border-radius:28px;padding:44px 40px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:34px;align-items:center;background-image:repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 54px,transparent 54px 108px)}
+.cl-hero h1{font:900 clamp(40px,5.6vw,72px)/.9 var(--f-display);font-stretch:118%;text-transform:uppercase;margin:16px 0 14px}
+.cl-hero h1 em{font-style:normal;color:var(--yellow)}
+.cl-hero p{font-size:18px;line-height:1.5;color:rgba(255,255,255,.92);margin:0 0 20px;max-width:52ch}
+.cl-hero img{display:block;width:100%;height:auto;border-radius:16px;box-shadow:0 22px 50px rgba(0,0,0,.3)}
+.cl-acts{display:flex;gap:10px;flex-wrap:wrap}
+.cl-acts .btn{display:inline-flex;align-items:center;padding:13px 18px;border-radius:12px;font:600 15px/1 var(--f-body);text-decoration:none!important;border:1px solid}
+.cl-acts .btn:hover{opacity:.9}
+.cl-acts .btn.light{background:#fff;color:var(--green-ink)!important;border-color:#fff}
+.cl-acts .btn.ghost{background:transparent;color:#fff!important;border-color:rgba(255,255,255,.5)}
+.cl-sec{margin:56px 0 0}
+.cl-sec>h2{font:900 clamp(30px,3.6vw,46px)/.95 var(--f-display);font-stretch:118%;text-transform:uppercase;margin:0 0 6px}
+.cl-sec>p.sub{color:var(--muted);font-size:16px;margin:0 0 20px;max-width:70ch}
+.card2{background:#fff;border:1px solid var(--line);border-radius:20px;padding:22px 24px;box-shadow:var(--lift)}
+.card2 h3{font:800 19px/1.15 var(--f-display);font-stretch:112%;text-transform:uppercase;margin:0 0 6px}
+.card2 p{margin:0;color:var(--ink-2);font-size:15px;line-height:1.5}
+.modes2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.modes2 ul{margin:10px 0 0;padding-left:18px;font-size:15px;line-height:1.6;color:var(--ink-2)}
+.modes2 img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line);margin-top:16px}
+.steps{counter-reset:s;display:grid;gap:14px}
+.stp{counter-increment:s;display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:28px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:22px;padding:26px 28px;box-shadow:var(--lift)}
+.stp .n::before{content:counter(s);display:inline-grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--green-deep);color:#fff;font:800 17px/1 var(--f-display);margin-bottom:12px}
+.stp h3{font:800 22px/1.1 var(--f-display);font-stretch:112%;text-transform:uppercase;margin:0 0 8px}
+.stp p{margin:0 0 10px;color:var(--ink-2);font-size:15.5px;line-height:1.55}
+.stp ul{margin:0;padding-left:18px;color:var(--ink-2);font-size:15px;line-height:1.6}
+.stp img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.stp .tall{max-height:460px;object-fit:cover;object-position:top}
+.dtab{width:100%;border-collapse:collapse;background:#fff;border-radius:16px;overflow:hidden;font-size:15px;box-shadow:var(--lift)}
+.dtab th,.dtab td{padding:12px 14px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.dtab th{font:600 11px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--tint)}
+.y{color:var(--green-ink);font-weight:600}.n2{color:#b4441f;font-weight:600}
+.priv{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.priv .card2{border-top:6px solid var(--green-deep)}
+.honest{background:#fdf1de;border:1px solid #f1d9ae;border-radius:20px;padding:20px 24px}
+.honest h3{margin:0 0 6px;font:800 18px var(--f-display);font-stretch:112%;text-transform:uppercase}
+.honest ul{margin:0;padding-left:18px;line-height:1.6}
+.cta{margin:56px 0 0;background:var(--ink);color:#fff;border-radius:28px;padding:36px 40px;display:flex;justify-content:space-between;gap:20px;align-items:center;flex-wrap:wrap}
+.cta h2{font:900 clamp(26px,3vw,38px)/1 var(--f-display);font-stretch:118%;text-transform:uppercase;margin:0 0 6px}
+.cta p{margin:0;color:rgba(255,255,255,.8)}
+@media (max-width:900px){.cl-hero,.modes2,.stp,.priv{grid-template-columns:1fr}.cl-hero{padding:30px 24px}.stp{padding:22px}}
+</style>
+</head>
+<body class="dam p-about">
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header"><div class="sh-bar"><a class="brand" href="index.html" aria-label="Footy Lab, home"><img class="mark" src="assets/brand/fl-mark.svg" width="30" height="30" alt=""><span class="brand-word" aria-hidden="true">Footy Lab</span></a><button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav"><span class="bars" aria-hidden="true"></span>Menu</button><nav class="site-nav" id="site-nav" aria-label="Main"><a href="index.html#tools" data-nav="tools">Tools</a><a href="players.html" data-nav="players">Players</a><a href="index.html#deep-dives" data-nav="deep-dives">Deep Dives</a><a href="about.html" data-nav="about">About</a><a href="lab/index.html" data-nav="lab">Club Lab</a><a class="nav-x" href="https://x.com/HugoMoyesAFL" target="_blank" rel="noopener">@HugoMoyesAFL</a><a class="nav-cta" href="mailto:footylabafl@gmail.com">Contact</a></nav></div></header>
+<main id="main"><div class="cl">
+<section class="cl-hero">
+  <div><span class="dam-pin">Club Lab · Beta · Free</span>
+    <h1>How Club Lab <em>works</em></h1>
+    <p>Club Lab is a free match analysis workspace for AFL and VFL club staff. Review your own games with the evidence in front of you, scout next week's opponent, and hand coaches a short report. All in one place, all in your browser.</p>
+    <div class="cl-acts"><a class="btn light" href="lab/index.html">Open Club Lab</a><a class="btn ghost" href="#how">Jump to the steps</a></div></div>
+  <img src="assets/shots/lab-review.jpg" width="1600" height="900" alt="Club Lab match review: Box Hill 94 defeated Williamstown 89 in round 9 of the 2026 VFL">
+</section>
+
+<section class="cl-sec"><h2>Two modes, one workspace</h2><p class="sub">Switch between them at the top of Club Lab. Matches, players, coding and clips are shared, so a game you code once serves both the review and the next scouting job.</p>
+  <div class="modes2">
+    <div class="card2"><h3>Our team</h3><p>Your club across a season.</p><ul><li>Team and player season numbers with league ranks</li><li>A review for each completed match: result, quarters, team and player match stats</li><li>Findings and follow-ups for training or the next game</li></ul><img src="assets/shots/lab-review.jpg" width="1600" height="900" loading="lazy" alt="Our team mode: Box Hill's match review against Williamstown"></div>
+    <div class="card2"><h3>Opponent</h3><p>The club you play next.</p><ul><li>Form, results, team stats and ratings</li><li>Every player's numbers and Footy Lab WAR</li><li>Their games coded and clipped, then a brief for coaches</li></ul><img src="assets/shots/lab-opponent.jpg" width="1600" height="900" loading="lazy" alt="Opponent mode: Box Hill preparing for Frankston"></div>
+  </div>
+</section>
+
+<section class="cl-sec" id="how"><h2>How a match review works</h2><p class="sub">Four steps from the final siren to a report. The screenshots are Box Hill's round 9 win over Williamstown, using the built-in VFL 2026 results.</p>
+  <div class="steps">
+    <div class="stp"><div class="n"><h3>Pick the match</h3><p>Set up your team and season, then add games from the built-in 2026 results or enter one by hand. Each game gets a Review button.</p><ul><li>Only completed games can be reviewed</li><li>The Data column shows which stats each game has</li></ul></div><img src="assets/shots/how-matches.jpg" width="1400" height="223" loading="lazy" alt="Club Lab matches list with Box Hill's round 9 game against Williamstown and a Review button"></div>
+    <div class="stp"><div class="n"><h3>Check your data</h3><p>Before any charts, Club Lab shows what this match has: the result, team stats, player stats, line-ups, coded events and video. Each is marked available, missing or optional.</p><ul><li>Missing means not recorded, never zero</li><li>Each gap has a next step: import, enter by hand or code it</li></ul></div><img src="assets/shots/how-coverage.jpg" width="1400" height="526" loading="lazy" alt="Data coverage panel showing the result available and team and player match stats missing"></div>
+    <div class="stp"><div class="n"><h3>Turn a number into a note</h3><p>Spot something worth raising? Press + next to it. Club Lab opens a finding with the stat, the match and the source already filled in. You add the rest in your own words.</p><ul><li><b>Observation:</b> one plain sentence on what happened</li><li><b>Interpretation:</b> your read on why, kept apart as opinion</li><li><b>Review question:</b> what to check on the vision</li><li><b>Follow-up:</b> what to work on, who owns it and when</li></ul></div><img class="tall" src="assets/shots/how-finding.jpg" width="1000" height="1271" loading="lazy" alt="A finding on scoring by quarter with the evidence filled in from the built-in results"></div>
+    <div class="stp"><div class="n"><h3>Share the report</h3><p>Pick the findings for coaches, put them in order and add a short summary. Club Lab builds the report with the result, the data used and each finding with its chart.</p><ul><li>Print it or save it as a PDF</li><li>Download it as Markdown</li><li>Present it on the big screen, one finding per slide</li></ul></div><img class="tall" src="assets/shots/how-report.jpg" width="1400" height="1969" loading="lazy" alt="The finished match review report for Box Hill v Williamstown"></div>
+  </div>
+</section>
+
+<section class="cl-sec"><h2>What's built in</h2><p class="sub">2026 season data, so much of the work is done before you start. Missing data is shown as missing, never as zero.</p>
+  <table class="dtab"><thead><tr><th></th><th>AFL 2026</th><th>VFL 2026</th></tr></thead><tbody>
+    <tr><td>Results and quarter scores</td><td class="y">Built in</td><td class="y">Built in</td></tr>
+    <tr><td>Team match stats</td><td class="y">Built in (summed from player stats)</td><td class="n2">Import your own</td></tr>
+    <tr><td>Player match stats</td><td class="y">Built in</td><td class="n2">Import your own</td></tr>
+    <tr><td>Season stats, lists and Footy Lab WAR</td><td class="y">Built in</td><td class="y">Built in</td></tr>
+    <tr><td>Coded events and video</td><td colspan="2">Yours: code in Club Lab with the templates, or import a spreadsheet</td></tr>
+  </tbody></table>
+</section>
+
+<section class="cl-sec"><h2>Your data stays with you</h2><p class="sub">No account, no server, no upload.</p>
+  <div class="priv"><div class="card2"><h3>In your browser</h3><p>Reviews, findings, stats and coding are saved on your own computer.</p></div>
+  <div class="card2"><h3>Video stays put</h3><p>Club Lab stores links, file names and timestamps. Your vision is never uploaded.</p></div>
+  <div class="card2"><h3>Backed up by you</h3><p>Download one backup file and restore it on another computer.</p></div></div>
+</section>
+
+<section class="cl-sec"><div class="honest"><h3>It's a beta</h3><ul><li>No club has used it across a full season yet. Feedback shapes what comes next.</li><li>VFL match stats need importing.</li><li>Built and tested in Chrome.</li></ul></div></section>
+
+<section class="cta"><div><h2>Using it at your club?</h2><p>Tell me what works and what's missing.</p></div><div class="cl-acts"><a class="btn light" href="lab/index.html">Open Club Lab</a><a class="btn ghost" href="mailto:footylabafl@gmail.com">Get in touch</a></div></section>
+</div></main>
+<footer class="site-footer"><div class="sf-sheet"><div class="sf-top"><div class="sf-brand"><a class="brand" href="index.html" aria-label="Footy Lab, home"><img class="mark" src="assets/brand/fl-mark.svg" width="30" height="30" alt=""><span class="brand-word" aria-hidden="true">Footy Lab</span></a><p class="sf-tag">Free footy analytics. Check the numbers.</p><p class="sf-note">Independent analytics. Not affiliated with the AFL or VFL.</p></div><div class="sf-col"><h2>Explore</h2><a href="index.html#tools">Tools</a><a href="players.html">Player profiles</a><a href="afl-war.html">WAR rankings</a><a href="lab/index.html">Club Lab</a><a href="index.html#deep-dives">Deep Dives</a></div><div class="sf-col"><h2>Contact</h2><a href="about.html">About</a><a href="mailto:footylabafl@gmail.com">footylabafl@gmail.com</a><a href="https://x.com/HugoMoyesAFL" target="_blank" rel="noopener">X @HugoMoyesAFL</a><a href="https://au.linkedin.com/in/hugo-moyes" target="_blank" rel="noopener">LinkedIn</a></div><img class="sf-badge" src="assets/brand/fl-badge.svg" width="128" height="128" alt=""></div><div class="sf-word" aria-hidden="true">Footy Lab</div><div class="sf-base"><span>&copy; 2026 Footy Lab</span><span>Free AFL and VFL analytics</span></div></div></footer>
+<script src="assets/dam.js" defer></script>
+</body>
+</html>

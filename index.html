@@ -127,6 +127,9 @@
 .lab-tile img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);box-shadow:0 18px 40px rgba(0,0,0,.12)}
 .lab-tile .btn{border-color:var(--green-deep);background:var(--green-deep);color:#fff!important}
 .lab-tile .btn:hover{background:var(--green-ink);border-color:var(--green-ink)}
+.lab-acts{display:flex;gap:10px;flex-wrap:wrap}
+.lab-tile .btn.alt{background:#fff;color:var(--green-deep)!important}
+.lab-tile .btn.alt:hover{background:var(--green-soft,#e6f2ea);color:var(--green-ink)!important}
 @media (max-width:900px){.lab-tile{grid-template-columns:1fr;padding:26px}}
 </style>
 </head>
@@ -154,7 +157,7 @@
 <section class="sec" id="labs" aria-labelledby="l-h"><div class="wrap">
   <div class="sec-head"><h2 id="l-h">Club Lab</h2><p>Free match analysis for club analysts and coaches. Beta.</p></div>
   <div class="lab-tile">
-    <div><h3>Review your games. <em>Scout the next one.</em></h3><p>Your team and your next opponent in one place, with 2026 AFL and VFL data built in.</p><a class="btn" href="lab/index.html">Open Club Lab</a></div>
+    <div><h3>Review your games. <em>Scout the next one.</em></h3><p>Your team and your next opponent in one place, with 2026 AFL and VFL data built in.</p><div class="lab-acts"><a class="btn" href="lab/index.html">Open Club Lab</a><a class="btn alt" href="club-lab.html">How it works</a></div></div>
     <img src="assets/shots/lab-review.jpg" width="1600" height="900" loading="lazy" alt="Club Lab match review: Box Hill 94 defeated Williamstown 89 in round 9 of the 2026 VFL, with quarter scores and form going into the match">
   </div>
 </div></section>
