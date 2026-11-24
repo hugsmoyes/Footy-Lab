@@ -22,7 +22,7 @@
   var key = /players/.test(file) ? 'players'
     : /^about/.test(file) ? 'about'
     : /^(article-|centre-ball-ups)/.test(file) ? 'deep-dives'
-    : /^index|^$/.test(file) ? null : 'models';
+    : /^index|^$/.test(file) ? null : 'tools';
   if (key) {
     var a = d.querySelector('.site-nav a[data-nav="' + key + '"]');
     if (a) a.setAttribute('aria-current', 'page');
