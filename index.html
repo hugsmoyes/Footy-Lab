@@ -119,27 +119,15 @@
   .po-pts{text-align:left;margin-top:12px}.po-go{justify-self:start;margin-top:10px}
   .feat{padding:22px}
 }
-/* labs preview */
-.labx .btn{border-color:var(--line-2);color:var(--ink)!important;background:#fff}.labx .btn:hover{background:var(--tint);border-color:var(--ink)}
-.labx .btn.primary{background:var(--green-deep);border-color:var(--green-deep);color:#fff!important}.labx .btn.primary:hover{background:var(--green-ink)}
-.labx{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:32px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:var(--r-lg,28px);box-shadow:var(--lift);padding:34px;position:relative;overflow:hidden}
-.labx::before{content:"";position:absolute;inset:0 0 auto 0;height:8px;background:var(--green-deep)}
-.labx-k{display:inline-flex;gap:8px;align-items:center;font:600 11px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--green-ink)}
-.labx-k .new{background:var(--yellow);color:var(--ink);border-radius:6px;padding:4px 7px}
-.labx h3{font:900 clamp(30px,3.6vw,46px)/.95 var(--f-display);font-stretch:118%;text-transform:uppercase;margin:14px 0 12px}
-.labx h3 em{font-style:normal;color:var(--green-deep)}
-.labx p.lead{font-size:16.5px;line-height:1.5;color:var(--ink-2);margin:0 0 16px}
-.modes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 16px}
-.mode{border:1px solid var(--line);border-radius:16px;padding:12px 14px;background:var(--tint)}
-.mode b{display:block;font:800 15px/1.2 var(--f-display);font-stretch:112%;text-transform:uppercase;margin-bottom:4px}
-.mode span{font-size:13.5px;color:var(--muted);line-height:1.4}
-.ticks{list-style:none;padding:0;margin:0 0 20px;display:grid;gap:6px;font-size:14px}
-.ticks li::before{content:"\2713";color:var(--green-deep);font-weight:700;margin-right:8px}
-.labx-acts{display:flex;gap:10px;flex-wrap:wrap}
-.shotstack{position:relative;padding:0 0 46px 0}
-.shotstack img{display:block;width:100%;height:auto;border-radius:16px;border:1px solid var(--line);box-shadow:0 18px 40px rgba(0,0,0,.14)}
-.shotstack img.b{position:absolute;width:56%;right:0;bottom:0;border-radius:14px}
-@media (max-width:980px){.labx{grid-template-columns:1fr;padding:26px}.shotstack img.b{right:0}}
+/* Club Lab tile */
+.lab-tile{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:36px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:28px;box-shadow:var(--lift);padding:36px}
+.lab-tile h3{font:900 clamp(30px,3.4vw,44px)/.95 var(--f-display);font-stretch:118%;text-transform:uppercase;margin:0 0 12px}
+.lab-tile h3 em{font-style:normal;color:var(--green-deep)}
+.lab-tile p{font-size:17px;line-height:1.5;color:var(--ink-2);margin:0 0 20px}
+.lab-tile img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);box-shadow:0 18px 40px rgba(0,0,0,.12)}
+.lab-tile .btn{border-color:var(--green-deep);background:var(--green-deep);color:#fff!important}
+.lab-tile .btn:hover{background:var(--green-ink);border-color:var(--green-ink)}
+@media (max-width:900px){.lab-tile{grid-template-columns:1fr;padding:26px}}
 </style>
 </head>
 <body class="dam p-home">
@@ -148,7 +136,7 @@
 <main id="main">
 <section class="hx" aria-labelledby="h-title"><div class="wrap"><div class="hx-sheet">
   <div class="hx-copy">
-    <span class="dam-pin">Free AFL + VFL analytics · New: Club Lab</span>
+    <span class="dam-pin">Free AFL + VFL analytics</span>
     <h1 id="h-title">Footy Lab.<span>Check the numbers.</span></h1>
     <p>Free AFL and VFL analytics. One number for what a player is worth, and the tools to back it up.</p>
     <div class="hx-acts"><a class="btn primary" href="lab/index.html">Open Club Lab</a><a class="btn" href="afl-war.html">WAR rankings</a><a class="btn" href="players.html">Player profiles</a></div>
@@ -165,16 +153,9 @@
 
 <section class="sec" id="labs" aria-labelledby="l-h"><div class="wrap">
   <div class="sec-head"><h2 id="l-h">Club Lab</h2><p>Free match analysis for club analysts and coaches. Beta.</p></div>
-  <div class="labx">
-    <div>
-      <span class="labx-k"><span class="new">New</span>For AFL and VFL club staff</span>
-      <h3>Review your games. <em>Scout the next one.</em></h3>
-      <p class="lead">One workspace for your club: your own team and player numbers, every completed match reviewed with the evidence, and the opposition for next week. Built-in 2026 AFL and VFL data, plus your own stats and vision.</p>
-      <div class="modes"><div class="mode"><b>Our team</b><span>Season numbers, match reviews, coded vision, follow-ups.</span></div><div class="mode"><b>Opponent</b><span>Form, team and player stats, their games coded, the brief.</span></div></div>
-      <ul class="ticks"><li>Shows what data each match has before any analysis</li><li>Findings keep the evidence apart from opinion</li><li>Coach-ready reports: print, PDF or present</li><li>Nothing uploaded: it all stays in your browser</li></ul>
-      <div class="labx-acts"><a class="btn primary" href="lab/index.html">Open Club Lab</a><a class="btn" href="lab/index.html?mode=opp">Scout an opponent</a></div>
-    </div>
-    <div class="shotstack"><img src="assets/shots/lab-review.jpg" width="1600" height="900" loading="lazy" alt="Club Lab match review: Box Hill 94 defeated Williamstown 89 in round 9 of the 2026 VFL, with quarter scores and form going into the match"><img class="b" src="assets/shots/lab-opponent.jpg" width="1600" height="900" loading="lazy" alt="Club Lab opponent mode: Box Hill v Frankston, with Frankston's 2026 VFL record, points per game, finals and last five"></div>
+  <div class="lab-tile">
+    <div><h3>Review your games. <em>Scout the next one.</em></h3><p>Your team and your next opponent in one place, with 2026 AFL and VFL data built in.</p><a class="btn" href="lab/index.html">Open Club Lab</a></div>
+    <img src="assets/shots/lab-review.jpg" width="1600" height="900" loading="lazy" alt="Club Lab match review: Box Hill 94 defeated Williamstown 89 in round 9 of the 2026 VFL, with quarter scores and form going into the match">
   </div>
 </div></section>
 
