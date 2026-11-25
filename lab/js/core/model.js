@@ -313,9 +313,9 @@
 
   /* ---------- match reviews (one per completed match in a team season) ---------- */
   /* Match reviews belong to a workspace: our team's season, or an opponent (analysing their games). */
-  function reviews() { const w = ws(); return w ? tl.reviews.filter(r => r.workspaceId === w.id) : []; }
+  function reviews(w) { w = w || ws(); return w ? tl.reviews.filter(r => r.workspaceId === w.id) : []; }
   function review(id) { return tl.reviews.find(r => r.id === id) || null; }
-  function reviewFor(matchId) { return reviews().find(r => r.matchId === matchId) || null; }
+  function reviewFor(matchId, w) { return reviews(w).find(r => r.matchId === matchId) || null; }
   function addReview(r) {
     const x = Object.assign({ id: U.uid('rv'), workspaceId: curId(), createdAt: new Date().toISOString(), matchId: '', quarters: null, focus: [], note: '', keyStats: null, done: {}, report: { title: '', intro: '' } }, r);
     tl.reviews.push(x); emit('reviews'); return x;
@@ -339,26 +339,43 @@
   /* Opponent mode keeps Opponent Lab's finding fields (coaching, confidence, statuses) so its briefs stay compatible. */
   const OSTATUS = ['Draft', 'Reviewed on video', 'Final'];
   const CONF = ['', 'Low', 'Medium', 'High'];
-  const fstore = () => mode() === 'opp' ? state.findings : tl.findings;
-  function wsFindings(reviewId) {
-    const id = curId();
-    if (mode() === 'opp') { const r = reviewId && review(reviewId); return state.findings.filter(f => f.workspaceId === id && (!r || (f.matchIds || []).includes(r.matchId))); }
-    return tl.findings.filter(f => f.workspaceId === id && (reviewId === undefined || ((f.reviewId || '') === reviewId && (reviewId !== '' || !f.week))));
+  /* Findings live with their workspace: our team season (tl.findings) or an opponent (state.findings).
+     Both sets show together in Findings and Report: an opponent belongs to the team season with the
+     same club, competition and season. */
+  const isOppF = f => state.findings.includes(f);
+  const storeOf = f => isOppF(f) ? state.findings : tl.findings;
+  function findingsOf(w) { if (!w) return []; return (w.kind === 'opp' ? state.findings : tl.findings).filter(f => f.workspaceId === w.id); }
+  function teamFor(w) {
+    if (!w) return null; if (w.kind === 'team') return w;
+    const n = x => String(x || '').toLowerCase();
+    return workspaces('team').find(t => n(t.team) === n(w.ourTeam) && n(t.competition) === n(w.competition) && String(t.season) === String(w.season)) || null;
+  }
+  function oppsFor(t) {
+    if (!t) return [];
+    const n = x => String(x || '').toLowerCase();
+    return workspaces('opp').filter(o => n(o.ourTeam) === n(t.team) && n(o.competition) === n(t.competition) && String(o.season) === String(t.season));
+  }
+  function wsFindings(reviewId, w) {
+    w = w || ws(); if (!w) return [];
+    if (w.kind === 'opp') { const r = reviewId && review(reviewId); return findingsOf(w).filter(f => !r || (f.matchIds || []).includes(r.matchId)); }
+    return findingsOf(w).filter(f => reviewId === undefined || ((f.reviewId || '') === reviewId && (reviewId !== '' || !f.week)));
   }
   /* The match week a team finding belongs to: a match id, or '' for a season finding. */
   function weekOf(f) {
+    if (isOppF(f)) return '';
     if (f.reviewId) { const r = review(f.reviewId); return r ? r.matchId : ''; }
     return f.week || '';
   }
-  function weekFindings(matchId) { return wsFindings().filter(f => weekOf(f) === matchId); }
+  function weekFindings(matchId, w) { return wsFindings(undefined, w || teamFor(ws())).filter(f => weekOf(f) === matchId); }
   function finding(id) { return tl.findings.find(x => x.id === id) || state.findings.find(x => x.id === id) || null; }
   function addFinding(f) {
-    if (mode() === 'opp') {
-      const o = Object.assign({ id: U.uid('fd'), workspaceId: curId(), createdAt: new Date().toISOString(), title: '', observation: '', stat: '', n: null, matchIds: [], source: '', chart: null, eventIds: [], clipIds: [], interpretation: '', coaching: '', confidence: '', limitations: '', status: 'Draft', inReport: true }, f);
-      delete o.reviewId; state.findings.push(o); emit('findings'); return o;
+    const w = (f.workspaceId && findWs(f.workspaceId)) || ws();
+    if (w && w.kind === 'opp') {
+      const o = Object.assign({ id: U.uid('fd'), workspaceId: w.id, createdAt: new Date().toISOString(), title: '', observation: '', stat: '', n: null, matchIds: [], source: '', chart: null, eventIds: [], clipIds: [], interpretation: '', coaching: '', confidence: '', limitations: '', status: 'Draft', inReport: true }, f);
+      delete o.reviewId; delete o.week; state.findings.push(o); emit('findings'); return o;
     }
     const x = Object.assign({
-      id: U.uid('tf'), workspaceId: tl.workspaceId, reviewId: '', createdAt: new Date().toISOString(),
+      id: U.uid('tf'), workspaceId: w ? w.id : tl.workspaceId, reviewId: '', createdAt: new Date().toISOString(),
       title: '', observation: '', stat: '', n: null, matchIds: [], source: '', chart: null, hideChart: false,
       eventIds: [], clipIds: [], interpretation: '', question: '', followUp: '', followOwner: '', followWhen: '', followStatus: 'Open',
       evidenceStatus: '', focus: '', limitations: '', status: 'Draft', inReport: true, week: ''
@@ -370,9 +387,9 @@
   function removeFinding(id) { tl.findings = tl.findings.filter(f => f.id !== id); state.findings = state.findings.filter(f => f.id !== id); emit('findings'); }
   function moveFinding(id, dir) {
     const f0 = finding(id); if (!f0) return;
-    const list = mode() === 'opp' ? wsFindings() : wsFindings().filter(f => weekOf(f) === weekOf(f0)), i = list.findIndex(f => f.id === id), j = i + dir;
+    const arr = storeOf(f0), list = arr.filter(f => f.workspaceId === f0.workspaceId && (isOppF(f0) || weekOf(f) === weekOf(f0))), i = list.indexOf(f0), j = i + dir;
     if (i < 0 || j < 0 || j >= list.length) return;
-    const arr = fstore(), a = arr.indexOf(list[i]), b = arr.indexOf(list[j]);
+    const a = arr.indexOf(list[i]), b = arr.indexOf(list[j]);
     [arr[a], arr[b]] = [arr[b], arr[a]];
     emit('findings');
   }
@@ -410,7 +427,7 @@
     template, saveTemplate, removeTemplate, restoreStarters, event, addEvent, updateEvent, removeEvent,
     setVideo, addClip, updateClip, removeClip, playlists, playlist, addPlaylist, updatePlaylist, removePlaylist,
     reviews, review, reviewFor, addReview, updateReview, removeReview,
-    wsFindings, weekOf, weekFindings, finding, addFinding, updateFinding, removeFinding, moveFinding,
+    wsFindings, weekOf, weekFindings, findingsOf, teamFor, oppsFor, isOppFinding: isOppF, finding, addFinding, updateFinding, removeFinding, moveFinding,
     exportAll, readBackup, restore, reset
   };
 })(window.Lab);

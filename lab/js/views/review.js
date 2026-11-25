@@ -81,7 +81,7 @@
     Lab.newFinding({ title: `${row.label}${period && period !== 'Full' ? ' (' + period + ')' : ''}: ${team} ${f(row.us)}, ${opp} ${f(row.them)}`,
       stat: `${team} ${f(row.us)}, ${opp} ${f(row.them)}${row.us != null && row.them != null ? ` (difference ${sg(row.us - row.them)})` : ''}, ${m.round} ${m.season}${period && period !== 'Full' ? ', ' + period : ''}.${row.base ? ` ${row.base.label.replace(/^./, c => c.toUpperCase())}: ${f(row.base.f)} for, ${f(row.base.a)} against.` : ''}`,
       n: 1, matchIds: [m.id], source: row.srcLabel, chart: { kind: 'mTeamStat', matchId: m.id, id: row.id, period: period || 'Full' },
-      limitations: lim(['One match. A team total shows how much, not why: check the footage before reading a cause into it.', row.src === 'pack' ? 'Team totals are summed from player stat lines.' : '', row.base ? row.base.note : 'No baseline available for this stat.']) });
+      limitations: lim(['One match. A team total shows how much, not why: check the footage before reading a cause into it.', row.src === 'pack' && !/team match stats/.test(row.srcLabel) ? 'Team totals are summed from player stat lines.' : '', row.base ? row.base.note : 'No baseline available for this stat.']) });
   }
   function fdPlayer(m, team, pl, row, k) {
     const c = pl.cols[k], f = v => MD().fmt(c.unit, v), opp = M.opponentIn(m, team);
@@ -275,7 +275,7 @@
           <div class="ctl" style="margin-top:10px"><button class="btn g" id="rvStart" ${future ? 'disabled' : ''}>${Lab.isOpp() ? 'Analyse this game' : 'Start review'}</button>${!r ? '<button class="btn" data-act="editMatch">Enter the score</button>' : ''}</div></section>
           <div class="sec">${sec.coverage(m, team, null)}</div>`;
       } else {
-        body = `<div class="rv-nav" role="tablist" aria-label="Review sections">${SECS.map(([id, l]) => `<button role="tab" aria-selected="${id === cur}" data-sec="${id}" class="${id === cur ? 'on' : ''}"><i class="dot dot-${secState(id, m, team, rv)}"></i>${l}</button>`).join('')}<button class="rv-rep" id="rvRep2">${Lab.isOpp() ? 'Brief →' : 'Report →'}</button></div>
+        body = `<div class="rv-nav" role="tablist" aria-label="Review sections">${SECS.map(([id, l]) => `<button role="tab" aria-selected="${id === cur}" data-sec="${id}" class="${id === cur ? 'on' : ''}"><i class="dot dot-${secState(id, m, team, rv)}"></i>${l}</button>`).join('')}<button class="rv-rep" id="rvRep2">${'Report →'}</button></div>
           <div class="sec">${sec[cur](m, team, rv)}</div>`;
       }
       el.innerHTML = `<section class="card rv-head"><div class="card-h" style="margin:0"><div><span class="k">${Lab.isOpp() ? `Match analysis · ${U.esc(team)}` : 'Match review'}</span><h2>${headline}</h2><p>${U.esc([m.round, m.season, m.date, m.venue].filter(Boolean).join(' · '))}${rv ? ` · ${Lab.isOpp() ? 'analysis' : 'review'} started ${U.esc(rv.createdAt.slice(0, 10))}` : ''}</p></div>
@@ -287,9 +287,9 @@
       U.$$('[data-sec]', el).forEach(b => b.onclick = () => { vs.rvSec = b.dataset.sec; Lab.render(); window.scrollTo({ top: 0 }); });
       U.$$('[data-act]', el).forEach(b => b.onclick = () => Lab.reviewAct(b.dataset.act, m));
       const st = U.$('#rvStart', el); if (st) st.onclick = () => { const focus = U.$('#rvF0', el).value.split(',').map(x => x.trim()).filter(Boolean); M.addReview({ matchId: m.id, focus }); vs.rvSec = 'coverage'; U.toast(Lab.isOpp() ? 'Analysis started' : 'Review started'); };
-      const del = U.$('#rvDel', el); if (del) del.onclick = () => { const n = Lab.isOpp() ? 0 : M.wsFindings(rv.id).length; if (confirm(`Delete this ${Lab.isOpp() ? 'match analysis (findings stay in the brief)' : 'match review'}${n ? ` and its ${n} finding${n === 1 ? '' : 's'}` : ''}? The match, its stats, coded events and clips stay in the shared library.`)) M.removeReview(rv.id); };
+      const del = U.$('#rvDel', el); if (del) del.onclick = () => { const n = Lab.isOpp() ? 0 : M.wsFindings(rv.id).length; if (confirm(`Delete this ${Lab.isOpp() ? 'match analysis (its findings stay in Findings)' : 'match review'}${n ? ` and its ${n} finding${n === 1 ? '' : 's'}` : ''}? The match, its stats, coded events and clips stay in the shared library.`)) M.removeReview(rv.id); };
       U.$$('[data-rvdone]', el).forEach(c => c.onchange = () => M.updateReview(rv.id, { done: Object.assign({}, rv.done, { [c.dataset.rvdone]: c.checked }) }));
-      const toRep = () => { vs.repScope = rv.id; vs.reportPreview = false; Lab.go('report'); };
+      const toRep = () => { if (Lab.isOpp()) { vs.repHz = 'opp'; vs.repOpp = M.ws().id; } else { vs.repScope = rv.id; vs.repHz = 'week'; } vs.reportPreview = false; Lab.go('report'); };
       ['#rvRep', '#rvRep2'].forEach(id => { const b = U.$(id, el); if (b) b.onclick = toRep; });
       if (!rv) return;
       U.$$('[data-fdq]', el).forEach(b => b.onclick = () => fdQuarters(m, team, MD().result(m, team, rv)));

@@ -37,7 +37,7 @@
     if (!f.chart || f.hideChart) return '';
     if (f.chart.kind === 'packTeam' || f.chart.kind === 'packPlayer') return packChart(f.chart);
     if (f.chart.kind === 'player') return playerChart(f.chart);
-    if (/^m[A-Z]/.test(f.chart.kind)) return Lab.MD.chart(f.chart);
+    if (/^m[A-Z]/.test(f.chart.kind)) return Lab.MD.chart(f.chart, M.findWs(f.workspaceId));
     return Lab.renderSpec(f.chart);
   }
 
@@ -84,15 +84,16 @@
   /* Create a finding and open it. partial: {title, stat, n, matchIds, source, chart, eventIds, clipIds, reviewId} */
   Lab.newFinding = function (partial) {
     partial = Object.assign({ observation: '', limitations: '' }, partial);
-    if (partial.reviewId == null) {
-      const ids = partial.matchIds || [], rv = ids.length === 1 ? M.reviewFor(ids[0]) : null;
+    const w = (partial.workspaceId && M.findWs(partial.workspaceId)) || M.ws();
+    if (w && w.kind === 'team' && partial.reviewId == null) {
+      const ids = partial.matchIds || [], rv = ids.length === 1 ? M.reviewFor(ids[0], w) : null;
       partial.reviewId = rv ? rv.id : '';
-      if (!rv && partial.week == null && ids.length === 1 && M.wsMatches().some(m => m.id === ids[0])) partial.week = ids[0];
+      if (!rv && partial.week == null && ids.length === 1 && M.wsMatches(w).some(m => m.id === ids[0])) partial.week = ids[0];
     }
     const f = M.addFinding(partial);
     if (!f.limitations) M.updateFinding(f.id, { limitations: autoLimits(f) });
     Lab.openFinding(f.id);
-    U.toast(Lab.isOpp() ? (f.inReport ? 'Added to the brief' : 'Finding saved') : f.reviewId ? 'Finding added to this match review' : f.week ? 'Weekly finding added' : 'Season finding added');
+    U.toast(M.isOppFinding(f) ? `${w.opponent} finding added` : f.reviewId ? 'Finding added to this match review' : f.week ? 'Weekly finding added' : 'Season finding added');
   };
 
   /* One line describing a coded event: when, what, the coded values and notes. */
@@ -112,17 +113,19 @@
   Lab.addToFinding = function (what) {
     const ws = M.ws(); if (!ws) return;
     const evIds = what.eventIds || [], clIds = (what.clipIds || []).concat(M.state.clips.filter(c => evIds.includes(c.eventId)).map(c => c.id)).filter((x, i, a) => a.indexOf(x) === i);
-    const mid = what.matchId, opp = Lab.isOpp(), all = M.wsFindings();
-    const week = !opp && mid ? M.weekFindings(mid) : [], rest = all.filter(f => !week.includes(f));
+    const mid = what.matchId, opp = Lab.isOpp(), { T, O } = ctx();
+    const all = (T ? M.wsFindings(undefined, T) : []).concat(...O.map(o => M.findingsOf(o)));
+    /* Findings first from where you are: this week (our team) or this opponent. */
+    const week = opp ? M.findingsOf(ws) : mid && T ? M.weekFindings(mid, T) : [], rest = all.filter(f => !week.includes(f));
     const has = f => evIds.every(x => (f.eventIds || []).includes(x)) && clIds.every(x => (f.clipIds || []).includes(x));
-    const where = f => opp ? (f.status || '') : M.weekOf(f) ? (M.weekOf(f) === mid ? 'This week' : 'Week: ' + M.matchLabel(M.match(M.weekOf(f)), ws.focus)) : 'Season';
+    const where = f => M.isOppFinding(f) ? 'Opponent: ' + ((M.findWs(f.workspaceId) || {}).opponent || '') : M.weekOf(f) ? (M.weekOf(f) === mid ? 'This week' : 'Week: ' + M.matchLabel(M.match(M.weekOf(f)), T ? T.focus : ws.focus)) : 'Season';
     const row = f => `<div class="pick-f"><div><b>${U.esc(f.title)}</b><span class="sub">${U.esc(where(f))} · ${pl((f.eventIds || []).length, 'event')} · ${pl((f.clipIds || []).length, 'clip')}</span></div>${has(f) ? '<span class="tag">Linked</span>' : `<button class="btn sm g" data-addto="${f.id}">Add</button>`}</div>`;
     Lab.openDrawer(`<div class="drawer-h"><div><span class="k">Add to a finding</span><h2>${U.esc(what.label || what.title)}</h2></div><button class="btn sm" data-close>Close</button></div>
       <div class="drawer-b">
         <p class="sub">${evIds.length ? `${evIds.length} coded event${evIds.length === 1 ? '' : 's'}` : ''}${evIds.length && clIds.length ? ' and ' : ''}${clIds.length ? `${clIds.length} clip${clIds.length === 1 ? '' : 's'}` : ''} will be linked. Linked events and clips show under the finding in the report.</p>
         <div class="ctl" style="margin:10px 0 16px"><button class="btn g" id="atNew">+ New finding</button></div>
-        ${!opp && mid ? `<h3>Findings this week (${week.length})</h3>${week.length ? week.map(row).join('') : '<p class="muted">None yet.</p>'}` : ''}
-        ${rest.length ? `<h3 style="margin-top:14px">${!opp && mid ? 'Other findings' : 'Findings'} (${rest.length})</h3>${rest.map(row).join('')}` : ''}
+        ${opp || mid ? `<h3>${opp ? `${U.esc(ws.opponent)} findings` : 'Findings this week'} (${week.length})</h3>${week.length ? week.map(row).join('') : '<p class="muted">None yet.</p>'}` : ''}
+        ${rest.length ? `<h3 style="margin-top:14px">${opp || mid ? 'Other findings' : 'Findings'} (${rest.length})</h3>${rest.map(row).join('')}` : ''}
       </div>`, d => {
       U.$('#atNew', d).onclick = () => { Lab.closeDrawer(); Lab.newFinding({ title: what.title, stat: what.stat || '', n: what.n || evIds.length || clIds.length, matchIds: mid ? [mid] : [], eventIds: evIds, clipIds: clIds, source: what.source || '', limitations: what.limitations || '' }); };
       U.$$('[data-addto]', d).forEach(b => b.onclick = () => {
@@ -145,8 +148,8 @@
 
   Lab.openFinding = function (id) {
     const f = M.finding(id); if (!f) return;
-    if (Lab.isOpp()) return oppFinding(f);
-    const ws = M.ws(), rv = f.reviewId ? M.review(f.reviewId) : null, rm = rv && M.match(rv.matchId);
+    if (M.isOppFinding(f)) return oppFinding(f);
+    const ws = M.findWs(f.workspaceId) || M.ws(), rv = f.reviewId ? M.review(f.reviewId) : null, rm = rv && M.match(rv.matchId);
     const scopeIds = rm ? [rm.id] : (f.matchIds && f.matchIds.length ? f.matchIds : M.wsMatches(ws).map(m => m.id));
     const ids = new Set(scopeIds);
     const clips = M.state.clips.filter(c => ids.has(c.matchId));
@@ -203,13 +206,13 @@
   };
 
 
-  /* ---------- opponent mode: Opponent Lab's finding fields and brief ---------- */
+  /* ---------- opponent findings (Opponent Lab's fields) and the opponent report ---------- */
   function oppFinding(f) {
-    const ws = M.ws(), id = f.id;
+    const ws = M.findWs(f.workspaceId) || M.ws(), id = f.id;
     const ids = new Set(M.wsMatches(ws).concat(M.ourMatches(ws)).map(m => m.id));
     const clips = M.state.clips.filter(c => ids.has(c.matchId));
     const evClips = new Set(M.state.clips.filter(c => (f.eventIds || []).includes(c.eventId)).map(c => c.id));
-    Lab.openDrawer(`<div class="drawer-h"><div><span class="k">Opposition finding</span><h2 id="drawerTitle">${U.esc(f.title || 'Untitled')}</h2></div><button class="btn sm" data-close>Close</button></div>
+    Lab.openDrawer(`<div class="drawer-h"><div><span class="k">Opponent finding · ${U.esc(ws.opponent || '')}</span><h2 id="drawerTitle">${U.esc(f.title || 'Untitled')}</h2></div><button class="btn sm" data-close>Close</button></div>
       <div class="drawer-b"><div class="form">
         <label class="full">Title<input data-ff="title" value="${U.esc(f.title)}"></label>
         <label class="full"><span class="lbl-obs">Observation · what the data shows</span><textarea data-ff="observation" placeholder="One plain sentence a coach can read in five seconds, e.g. Kick-ins go short to the left pocket most of the time.">${U.esc(f.observation)}</textarea></label>
@@ -220,9 +223,9 @@
         <label class="full"><span class="lbl-int">Analyst interpretation · opinion</span><textarea data-ff="interpretation" placeholder="What you think it means, after watching the vision.">${U.esc(f.interpretation)}</textarea></label>
         <label class="full"><span class="lbl-act">Coaching question / preparation point</span><textarea data-ff="coaching" placeholder="What coaches could review or prepare.">${U.esc(f.coaching || '')}</textarea></label>
         <label>Confidence<select data-ff="confidence">${M.CONF.map(x => `<option value="${x}" ${x === (f.confidence || '') ? 'selected' : ''}>${x || 'Not set'}</option>`).join('')}</select></label>
-        <label class="cb" style="align-self:end"><input type="checkbox" data-ff="inReport" ${f.inReport ? 'checked' : ''}> Include in the brief</label>
+        <label class="cb" style="align-self:end"><input type="checkbox" data-ff="inReport" ${f.inReport ? 'checked' : ''}> Include in the report</label>
         <label class="full">Limitations<textarea data-ff="limitations">${U.esc(f.limitations)}</textarea></label>
-        ${f.chart ? `<label class="cb full"><input type="checkbox" data-ff="hideChart" ${f.hideChart ? 'checked' : ''}> Leave the chart out of the brief</label>` : ''}
+        ${f.chart ? `<label class="cb full"><input type="checkbox" data-ff="hideChart" ${f.hideChart ? 'checked' : ''}> Leave the chart out of the report</label>` : ''}
       </div>
       <p class="sub">Matches: ${(f.matchIds || []).map(mid => U.esc(M.matchLabel(M.match(mid), ws.focus))).join(', ') || 'none recorded'} · Linked events: ${(f.eventIds || []).length}</p>
       <h3 style="margin-top:12px">Clips</h3>${clips.length ? `<div class="chk-grid">${clips.map(c => `<label><input type="checkbox" data-fc value="${c.id}" ${(f.clipIds || []).includes(c.id) ? 'checked' : ''}> ${U.esc(c.title)}${evClips.has(c.id) ? ' <span class="badge2 clip">linked event</span>' : ''}</label>`).join('')}</div>` : '<p class="muted">No clips yet for these matches.</p>'}
@@ -243,17 +246,11 @@
       ${ms.map(m => { const u = M.matchUsage(m.id), r = M.result(m, opp); return `<tr><td class="l">${U.esc(M.matchLabel(m, opp))}</td><td class="l">${r ? `${r.res} ${U.signed(r.margin)}` : '<span class="muted">–</span>'}</td><td>${u.events || '–'}</td><td>${u.clips || '–'}</td></tr>`; }).join('') || '<tr><td class="l muted" colspan="4">No matches reviewed</td></tr>'}</tbody></table>`;
   }
   const OCAVEAT = 'Statistics come from the season data and from events coded by club staff. Averages and rates describe past games with their sample sizes; they are not predictions. "Analyst read" and "For coaches" are opinion.';
-  const oppTitle = ws => (ws.report || {}).title || `${ws.ourTeam || 'Us'} v ${ws.opponent}: opposition brief`;
+  const oppTitle = ws => (ws.report || {}).title || `${ws.ourTeam || 'Us'} v ${ws.opponent}: opposition report`;
   const oppMeta = ws => [ws.competition, ws.season, ws.round, ws.date, ws.venue].filter(Boolean).join(' · ');
-  function oppBrief(ws) {
-    const items = M.wsFindings().filter(f => f.inReport), r = ws.report || {};
-    return `<article class="brief" id="briefDoc">
-      <h1>${U.esc(oppTitle(ws))}</h1>
-      <div class="bmeta">Opposition brief · prepared ${U.esc(U.today())}${oppMeta(ws) ? ' · ' + U.esc(oppMeta(ws)) : ''}</div>
-      ${r.intro ? `<p class="lead">${U.esc(r.intro)}</p>` : ''}
-      ${M.wsMatches(ws).length ? `<h2>Matches reviewed</h2>${oppCoverage(ws)}` : ''}
-      <h2>Findings</h2>
-      ${items.length ? items.map((f, i) => { const clips = (f.clipIds || []).map(id => M.state.clips.find(c => c.id === id)).filter(Boolean), ch = chartFor(f); return `<div class="item">
+  function oppItemHTML(f, i) {
+    const clips = (f.clipIds || []).map(id => M.state.clips.find(c => c.id === id)).filter(Boolean), ch = chartFor(f);
+    return `<div class="item">
         <h3>${i + 1}. ${U.esc(f.title || 'Untitled')}${f.confidence ? ` <span class="conf conf-${f.confidence}">${f.confidence} confidence</span>` : ''}</h3>
         ${f.observation ? `<p class="obs">${U.esc(f.observation)}</p>` : ''}
         ${f.stat ? `<p><span class="lbl-obs">Evidence</span> ${U.esc(f.stat)}${f.n != null ? ` <span class="muted">(n=${f.n}${f.n < U.SMALL_N ? ', small' : ''})</span>` : ''}</p>` : ''}
@@ -261,16 +258,9 @@
         ${f.interpretation ? `<p><span class="lbl-int">Analyst read</span> ${U.esc(f.interpretation)}</p>` : ''}
         ${f.coaching ? `<p><span class="lbl-act">For coaches</span> ${U.esc(f.coaching)}</p>` : ''}
         ${clips.length ? `<p class="small"><b>Clips:</b> ${clips.map(c => U.esc(clipLine(c))).join('; ')}</p>` : ''}${evHTML(f)}
-        <p class="small muted">${f.source ? U.esc(f.source) + '. ' : ''}${f.limitations ? 'Limitations: ' + U.esc(f.limitations) : ''}${f.status && f.status !== 'Final' ? ` · Status: ${U.esc(f.status)}` : ''}</p></div>`; }).join('') : '<p class="muted">No findings selected for the brief yet.</p>'}
-      ${M.playlists(ws.id).filter(p => p.clipIds.length).map(p => `<h2>Video: ${U.esc(p.name)}</h2><ol class="small">${p.clipIds.map(id => M.state.clips.find(c => c.id === id)).filter(Boolean).map(c => `<li>${U.esc(clipLine(c))}</li>`).join('')}</ol>`).join('')}
-      <p class="caveat">${OCAVEAT}</p></article>`;
+        <p class="small muted">${f.source ? U.esc(f.source) + '. ' : ''}${f.limitations ? 'Limitations: ' + U.esc(f.limitations) : ''}${f.status && f.status !== 'Final' ? ` · Status: ${U.esc(f.status)}` : ''}</p></div>`;
   }
-  function oppMarkdown(ws) {
-    const items = M.wsFindings().filter(f => f.inReport), r = ws.report || {};
-    const L = [`# ${oppTitle(ws)}`, `Opposition brief, ${U.today()}. ${oppMeta(ws)}`, ''];
-    if (r.intro) L.push(r.intro, '');
-    if (M.wsMatches(ws).length) L.push('## Matches reviewed', ...M.wsMatches(ws).map(m => { const u = M.matchUsage(m.id), res = M.result(m, ws.focus); return `- ${M.matchLabel(m, ws.focus)}: ${res ? res.res + ' ' + U.signed(res.margin) + '; ' : ''}${u.events} coded events; ${u.clips} clips`; }), '');
-    L.push('## Findings');
+  function oppItemsMD(items, L) {
     items.forEach((f, i) => {
       L.push(`### ${i + 1}. ${f.title}${f.confidence ? ` (${f.confidence} confidence)` : ''}`);
       if (f.observation) L.push(f.observation);
@@ -283,14 +273,41 @@
       if (f.limitations) L.push(`_Limitations: ${f.limitations}_`);
       L.push('');
     });
+  }
+  const oppSlides = (o, items) => items.map((f, i) => `<div class="slide"><span class="k">${U.esc(o.opponent)} · finding ${i + 1} of ${items.length}</span><h2>${U.esc(f.title)}</h2>${f.observation ? `<p class="lead">${U.esc(f.observation)}</p>` : ''}<div class="slide-grid"><div>${chartFor(f) || ''}</div><div>${f.stat ? `<p><span class="lbl-obs">Evidence</span> ${U.esc(f.stat)}</p>` : ''}${f.interpretation ? `<p><span class="lbl-int">Analyst read</span> ${U.esc(f.interpretation)}</p>` : ''}${f.coaching ? `<p><span class="lbl-act">For coaches</span> ${U.esc(f.coaching)}</p>` : ''}</div></div></div>`);
+  /* An opponent section inside a weekly or season report. */
+  function oppSection(o) {
+    const items = M.findingsOf(o).filter(f => f.inReport);
+    return `<h2>Opponent: ${U.esc(o.opponent)}</h2>${M.wsMatches(o).length ? `<p class="small muted">Their games analysed</p>${oppCoverage(o)}` : ''}
+      ${items.length ? items.map(oppItemHTML).join('') : '<p class="muted">No opponent findings selected yet.</p>'}`;
+  }
+  function oppBrief(ws) {
+    const items = M.findingsOf(ws).filter(f => f.inReport), r = ws.report || {};
+    return `<article class="brief" id="briefDoc">
+      <h1>${U.esc(oppTitle(ws))}</h1>
+      <div class="bmeta">Opposition report · prepared ${U.esc(U.today())}${oppMeta(ws) ? ' · ' + U.esc(oppMeta(ws)) : ''}</div>
+      ${r.intro ? `<p class="lead">${U.esc(r.intro)}</p>` : ''}
+      ${M.wsMatches(ws).length ? `<h2>Matches analysed</h2>${oppCoverage(ws)}` : ''}
+      <h2>Findings</h2>
+      ${items.length ? items.map(oppItemHTML).join('') : '<p class="muted">No findings selected yet.</p>'}
+      ${M.playlists(ws.id).filter(p => p.clipIds.length).map(p => `<h2>Video: ${U.esc(p.name)}</h2><ol class="small">${p.clipIds.map(id => M.state.clips.find(c => c.id === id)).filter(Boolean).map(c => `<li>${U.esc(clipLine(c))}</li>`).join('')}</ol>`).join('')}
+      <p class="caveat">${OCAVEAT}</p></article>`;
+  }
+  function oppMarkdown(ws) {
+    const items = M.findingsOf(ws).filter(f => f.inReport), r = ws.report || {};
+    const L = [`# ${oppTitle(ws)}`, `Opposition report, ${U.today()}. ${oppMeta(ws)}`, ''];
+    if (r.intro) L.push(r.intro, '');
+    if (M.wsMatches(ws).length) L.push('## Matches analysed', ...M.wsMatches(ws).map(m => { const u = M.matchUsage(m.id), res = M.result(m, ws.focus); return `- ${M.matchLabel(m, ws.focus)}: ${res ? res.res + ' ' + U.signed(res.margin) + '; ' : ''}${u.events} coded events, ${u.clips} clips`; }), '');
+    L.push('## Findings');
+    oppItemsMD(items, L);
     L.push('_' + OCAVEAT + '_');
     return L.join('\n');
   }
   function oppPresent(ws) {
-    const items = M.wsFindings().filter(f => f.inReport), r = ws.report || {};
-    const slides = [`<div class="slide title"><span class="dam-pin">Opposition brief</span><h1>${U.esc(ws.ourTeam || 'Us')} v <em>${U.esc(ws.opponent)}</em></h1><p>${U.esc(oppMeta(ws))}</p>${r.intro ? `<p class="lead">${U.esc(r.intro)}</p>` : ''}</div>`]
-      .concat(M.wsMatches(ws).length ? [`<div class="slide"><h2>Matches reviewed</h2>${oppCoverage(ws)}</div>`] : [])
-      .concat(items.map((f, i) => `<div class="slide"><span class="k">Finding ${i + 1} of ${items.length}</span><h2>${U.esc(f.title)}</h2>${f.observation ? `<p class="lead">${U.esc(f.observation)}</p>` : ''}<div class="slide-grid"><div>${chartFor(f) || ''}</div><div>${f.stat ? `<p><span class="lbl-obs">Evidence</span><br>${U.esc(f.stat)}</p>` : ''}${f.coaching ? `<p><span class="lbl-act">For coaches</span><br>${U.esc(f.coaching)}</p>` : ''}${f.interpretation ? `<p><span class="lbl-int">Analyst read</span><br>${U.esc(f.interpretation)}</p>` : ''}</div></div></div>`));
+    const items = M.findingsOf(ws).filter(f => f.inReport), r = ws.report || {};
+    const slides = [`<div class="slide title"><span class="dam-pin">Opposition report</span><h1>${U.esc(ws.ourTeam || 'Us')} v <em>${U.esc(ws.opponent)}</em></h1><p>${U.esc(oppMeta(ws))}</p>${r.intro ? `<p class="lead">${U.esc(r.intro)}</p>` : ''}</div>`]
+      .concat(M.wsMatches(ws).length ? [`<div class="slide"><h2>Matches analysed</h2>${oppCoverage(ws)}</div>`] : [])
+      .concat(oppSlides(ws, items));
     showSlides(slides);
   }
   function showSlides(slides) {
@@ -301,34 +318,6 @@
     function close() { document.removeEventListener('keydown', key); ov.remove(); }
     document.addEventListener('keydown', key); document.body.appendChild(ov); draw();
   }
-  function oppReportView(el, ws) {
-    const list = M.wsFindings();
-    ws.report = ws.report || { title: '', intro: '' };
-    if (vs.reportPreview) {
-      el.innerHTML = `<div class="ctl no-print" style="margin-bottom:10px"><button class="btn" id="rBack">← Back</button><button class="btn p" id="rPrint">Print or save as PDF</button><button class="btn" id="rMd">Download Markdown</button><button class="btn g" id="rPres">Present</button></div>${oppBrief(ws)}`;
-      U.$('#rBack', el).onclick = () => { vs.reportPreview = false; Lab.render(); };
-      U.$('#rPrint', el).onclick = () => { el.classList.add('printing'); window.print(); el.classList.remove('printing'); };
-      U.$('#rMd', el).onclick = () => U.download(`brief-${U.norm(ws.opponent)}-${U.today()}.md`, oppMarkdown(ws), 'text/markdown;charset=utf-8');
-      U.$('#rPres', el).onclick = () => oppPresent(ws);
-      return;
-    }
-    el.innerHTML = `
-      <section class="card"><div class="card-h"><div><h2>Brief</h2><p>Choose what goes to the coaches, put it in order, then preview, print, export or present.</p></div>
-        <div class="ctl"><button class="btn g" id="rOpen" ${list.some(f => f.inReport) ? '' : 'disabled'}>Preview brief</button><button class="btn" id="rPres2" ${list.some(f => f.inReport) ? '' : 'disabled'}>Present</button></div></div>
-        <div class="form"><label>Brief title<input id="rTitle" value="${U.esc(ws.report.title || '')}" placeholder="${U.esc((ws.ourTeam || 'Us') + ' v ' + ws.opponent + ': opposition brief')}"></label><label>Summary for coaches (2–3 lines)<input id="rIntro" value="${U.esc(ws.report.intro || '')}" placeholder="The three things that matter most this week"></label></div></section>
-      <section class="sec card"><div class="card-h"><div><h2>Brief items (${list.length})</h2><p>Add from the Team and Players tabs with <b>+</b>, from Explore with <b>+ Finding</b>, or below.</p></div><div class="ctl"><button class="btn" id="fBlank">+ Blank item</button></div></div>
-        ${list.length ? Lab.findingCards(list) : `<div class="empty"><h3>Nothing in the brief yet</h3><p>Add team and player stats from the Opponent tabs or the panel below, and findings from your coding in Explore.</p></div>`}
-      </section>
-      ${addPanel(ws)}`;
-    wireAdd(el, ws);
-    const saveMeta = () => M.updateWorkspace(ws.id, { report: Object.assign({}, ws.report, { title: U.$('#rTitle', el).value, intro: U.$('#rIntro', el).value }) });
-    U.$('#rTitle', el).onchange = saveMeta; U.$('#rIntro', el).onchange = saveMeta;
-    U.$('#rOpen', el).onclick = () => { vs.reportPreview = true; Lab.render(); };
-    U.$('#rPres2', el).onclick = () => oppPresent(ws);
-    U.$('#fBlank', el).onclick = () => Lab.newFinding({ title: 'New finding', source: 'Analyst observation' });
-    Lab.wireFindingCards(el);
-  }
-
   /* Finding cards, shared by Match review and Findings. */
   Lab.findingCards = function (list) {
     return `<div class="fgrid">${list.map((f, i) => `<div class="fcard ${f.inReport ? '' : 'out'}">
@@ -339,7 +328,7 @@
       ${f.question ? `<p class="small"><span class="lbl-q">Review question</span> ${U.esc(f.question)}</p>` : ''}${f.coaching ? `<p class="small"><span class="lbl-act">For coaches</span> ${U.esc(f.coaching)}</p>` : ''}${f.confidence ? `<p class="small muted">${U.esc(f.confidence)} confidence</p>` : ''}
       ${f.followUp ? `<p class="small"><span class="lbl-act">Follow-up</span> ${U.esc(f.followUp)} <span class="muted">(${U.esc(f.followStatus)})</span></p>` : ''}
       <p class="small muted">${f.interpretation ? 'Interpretation written' : 'No interpretation'} · ${(f.clipIds || []).length} clips · ${(f.eventIds || []).length} events${f.chart ? ' · chart' : ''}</p>
-      <div class="ctl"><label class="cb"><input type="checkbox" data-inrep="${f.id}" ${f.inReport ? 'checked' : ''}> ${Lab.isOpp() ? 'In brief' : 'In report'}</label><button class="btn sm g" data-fedit="${f.id}">Open</button></div></div>`).join('')}</div>`;
+      <div class="ctl"><label class="cb"><input type="checkbox" data-inrep="${f.id}" ${f.inReport ? 'checked' : ''}> ${'In report'}</label><button class="btn sm g" data-fedit="${f.id}">Open</button></div></div>`).join('')}</div>`;
   };
   Lab.wireFindingCards = function (el) {
     U.$$('[data-fedit]', el).forEach(b => b.onclick = () => Lab.openFinding(b.dataset.fedit));
@@ -358,50 +347,65 @@
   };
 
   /* ---------- Findings tab: every finding for the team season ---------- */
+  /* Our team season and the opponents linked to it (same club, competition and season).
+     Findings and Report show all of them together, whichever mode you're in. */
+  function ctx() {
+    const w = M.ws(), T = M.teamFor(w), O = T ? M.oppsFor(T) : [];
+    if (w && w.kind === 'opp' && !O.includes(w)) O.push(w);
+    return { w, T, O };
+  }
+  Lab.findingsCtx = ctx;
+  const toTeam = T => { if (M.ws() !== T) M.selectWorkspace(T.id); };
   Lab.Views.findings = {
-    render(el, { ws }) {
-      if (Lab.isOpp()) {
-        const list = M.wsFindings();
-        el.innerHTML = `<section class="card"><div class="card-h"><div><h2>Findings</h2><p>${list.length} finding${list.length === 1 ? '' : 's'} for ${U.esc(ws.ourTeam || 'us')} v ${U.esc(ws.opponent)}. Observation and evidence first, then the analyst read and the coaching point. Order here is the brief order.</p></div><div class="ctl"><button class="btn g" id="fdNew">+ New finding</button><button class="btn" onclick="Lab.go('report')">Brief →</button></div></div>
-          ${list.length ? Lab.findingCards(list) : '<div class="empty"><h3>No findings yet</h3><p>Use + on the Team and Players tabs, + Finding in Explore, or write one from scratch.</p></div>'}</section>`;
-        U.$('#fdNew', el).onclick = () => Lab.newFinding({ title: 'New finding', source: 'Analyst observation' });
-        Lab.wireFindingCards(el);
-        return;
-      }
-      const all = M.wsFindings(), hz = vs.fdHz === 'season' ? 'season' : 'week';
+    render(el) {
+      const { w, T, O } = ctx();
       const st = vs.fdStatus || '', fq = (vs.fdQ || '').toLowerCase();
-      const keep = f => (!st || (st === 'open' ? f.followUp && f.followStatus !== 'Done' : f.status === st)) && (!fq || [f.title, f.observation, f.stat, f.interpretation, f.question, f.followUp].join(' ').toLowerCase().includes(fq));
-      const weekly = all.filter(f => M.weekOf(f)), season = M.wsFindings('');
-      const ms = M.wsMatches(ws), weeks = ms.filter(m => M.reviewFor(m.id) || M.weekFindings(m.id).length).reverse();
+      const keep = f => (!st || (st === 'open' ? f.followUp && f.followStatus !== 'Done' : st === 'Ready for report' ? ['Ready for report', 'Final'].includes(f.status) : f.status === st)) && (!fq || [f.title, f.observation, f.stat, f.interpretation, f.question, f.followUp, f.coaching].join(' ').toLowerCase().includes(fq));
+      const all = T ? M.wsFindings(undefined, T) : [], weekly = all.filter(f => M.weekOf(f)), season = T ? M.wsFindings('', T) : [];
+      const oppN = O.reduce((n, o) => n + M.findingsOf(o).length, 0);
+      const HZ = [['all', `All (${all.length + oppN})`]].concat(T ? [['week', `Weekly (${weekly.length})`], ['season', `Season (${season.length})`]] : [], [['opp', `Opponents (${oppN})`]]);
+      const hz = HZ.some(x => x[0] === vs.fdHz) ? vs.fdHz : 'all';
+      const seg = `<span class="seg" role="group" aria-label="Findings to show">${HZ.map(([k, l]) => `<button class="${hz === k ? 'on' : ''}" data-fdhz="${k}">${l}</button>`).join('')}</span>`;
+      const ms = T ? M.wsMatches(T) : [], weeks = ms.filter(m => M.reviewFor(m.id, T) || M.weekFindings(m.id, T).length).reverse();
       const pickWeek = ms.some(m => m.id === vs.fdWeek) ? vs.fdWeek : (weeks[0] || ms[ms.length - 1] || {}).id || '';
-      const seg = `<span class="seg" role="group" aria-label="Findings to show">${[['week', `Weekly (${weekly.length})`], ['season', `Season (${season.length})`]].map(([k, l]) => `<button class="${hz === k ? 'on' : ''}" data-fdhz="${k}">${l}</button>`).join('')}</span>`;
-      const wkRes = m => { const r = Lab.MD.result(m, ws.focus, M.reviewFor(m.id)); return r ? `${r.res} ${U.signed(r.margin)}, ${r.us}-${r.them}` : 'No score entered'; };
-      const weekHTML = weeks.length ? weeks.map(m => { const rv = M.reviewFor(m.id), list = M.weekFindings(m.id).filter(keep);
-          return `<section class="sec card"><div class="card-h"><div><h2>Week: ${U.esc(M.matchLabel(m, ws.focus))}</h2><p>${U.esc(wkRes(m))} · ${M.weekFindings(m.id).length} finding${M.weekFindings(m.id).length === 1 ? '' : 's'}${rv ? ', including the match review' : ''}</p></div>
+      const wkRes = m => { const r = Lab.MD.result(m, T.focus, M.reviewFor(m.id, T)); return r ? `${r.res} ${U.signed(r.margin)}, ${r.us}-${r.them}` : 'No score entered'; };
+      const weekHTML = !T ? '' : weeks.length ? weeks.map(m => { const rv = M.reviewFor(m.id, T), n = M.weekFindings(m.id, T).length, list = M.weekFindings(m.id, T).filter(keep);
+          return `<section class="sec card"><div class="card-h"><div><span class="k">Our team · weekly</span><h2>Week: ${U.esc(M.matchLabel(m, T.focus))}</h2><p>${U.esc(wkRes(m))} · ${n} finding${n === 1 ? '' : 's'}${rv ? ', including the match review' : ''}</p></div>
             <div class="ctl"><button class="btn sm g" data-wkadd="${m.id}">+ Add to this week</button>${rv ? `<button class="btn sm" data-openrv="${m.id}">Open review</button>` : ''}<button class="btn sm" data-wkrep="${m.id}">Weekly report →</button></div></div>
             ${list.length ? Lab.findingCards(list) : '<p class="muted">None match the filter.</p>'}</section>`; }).join('')
-        : `<section class="sec card"><div class="empty"><h3>No weekly findings yet</h3><p>${ms.length ? 'Start a match review, or add a weekly finding for any game above.' : 'Add your games in Matches first. Each game is a week.'}</p></div></section>`;
-      const seasonHTML = `<section class="sec card"><div class="card-h"><div><h2>Season findings</h2><p>Longer-term findings, not tied to one week: season stats and patterns across games.</p></div><div class="ctl"><button class="btn sm" data-sznrep>Season report →</button></div></div>
-        ${season.filter(keep).length ? Lab.findingCards(season.filter(keep)) : '<p class="muted">None yet. Add season stats from the Team and Players tabs, findings from Explore, or write one with + Season finding.</p>'}</section>`;
+        : `<section class="sec card"><div class="empty"><h3>No weekly findings yet</h3><p>${ms.length ? `Start a match review for a ${U.esc(T.focus)} game, or add a weekly finding.` : `Add ${U.esc(T.focus)} games in Matches first. Each game is a week.`}</p></div></section>`;
+      const seasonHTML = !T ? '' : `<section class="sec card"><div class="card-h"><div><span class="k">Our team · season</span><h2>Season findings</h2><p>Longer-term findings for ${U.esc(T.focus)}: season stats and patterns across games.</p></div><div class="ctl"><button class="btn sm g" data-szadd>+ Season finding</button><button class="btn sm" data-sznrep>Season report →</button></div></div>
+        ${season.filter(keep).length ? Lab.findingCards(season.filter(keep)) : '<p class="muted">None yet. Add season stats from the Team and Players tabs, findings from Explore, or write one.</p>'}</section>`;
+      const oppHTML = O.length ? O.map(o => { const fl = M.findingsOf(o), list = fl.filter(keep);
+          return `<section class="sec card"><div class="card-h"><div><span class="k">Opponent</span><h2>${U.esc(o.opponent)}</h2><p>${fl.length} finding${fl.length === 1 ? '' : 's'} from scouting ${U.esc(o.opponent)}: their stats, analysed games and coding.</p></div>
+            <div class="ctl"><button class="btn sm g" data-oadd="${o.id}">+ Opponent finding</button><button class="btn sm" data-orep="${o.id}">Opponent report →</button></div></div>
+            ${list.length ? Lab.findingCards(list) : `<p class="muted">${fl.length ? 'None match the filter.' : `None yet. Switch to Opponent mode for ${U.esc(o.opponent)} and use + on their stats, games and coding.`}</p>`}</section>`; }).join('')
+        : `<section class="sec card"><div class="empty"><h3>No opponents yet</h3><p>Switch to Opponent mode and add the club you're playing${T ? ` (with ${U.esc(T.team)} as our club)` : ''}. Their findings show here too.</p></div></section>`;
+      const unlinked = !T && w && w.kind === 'opp' ? `<p class="warnline">This opponent isn't linked to one of your team seasons, so only its findings show. Edit the opponent and set Our club, competition and season to match a team season.</p>` : '';
       el.innerHTML = `
-      <section class="card"><div class="card-h"><div><h2>Findings</h2><p>Weekly findings go in that week's report for coaches. Season findings are the longer-term picture and go in the season report. Each keeps observation and evidence apart from interpretation, review questions and follow-up.</p></div>
-        <div class="ctl">${hz === 'week' ? (ms.length ? `<select id="fdWeek" aria-label="Week">${ms.slice().reverse().map(m => `<option value="${m.id}" ${m.id === pickWeek ? 'selected' : ''}>${U.esc(M.matchLabel(m, ws.focus))}</option>`).join('')}</select><button class="btn g" id="fdNew">+ Weekly finding</button>` : '') : '<button class="btn g" id="fdNew">+ Season finding</button>'}</div></div>
-        <div class="f-row"><div class="f"><label>Horizon</label>${seg}</div><div class="f"><label>Show</label><span class="seg">${[['', 'All'], ['Draft', 'Draft'], ['Ready for report', 'Ready'], ['open', 'Open follow-ups']].map(([k, l]) => `<button class="${st === k ? 'on' : ''}" data-fdst="${k}">${l}</button>`).join('')}</span></div>
+      <section class="card"><div class="card-h"><div><h2>Findings</h2><p>Everything you find, in one place: ${T ? `${U.esc(T.focus)}'s weekly and season findings` : 'your team findings'} and ${O.length ? O.map(o => U.esc(o.opponent)).join(', ') : 'any opponent you scout'}. All of them can go in the report.</p></div>
+        <div class="ctl">${hz === 'week' && ms.length ? `<select id="fdWeek" aria-label="Week">${ms.slice().reverse().map(m => `<option value="${m.id}" ${m.id === pickWeek ? 'selected' : ''}>${U.esc(M.matchLabel(m, T.focus))}</option>`).join('')}</select><button class="btn g" id="fdNew">+ Weekly finding</button>` : hz === 'season' ? '<button class="btn g" data-szadd>+ Season finding</button>' : ''}</div></div>
+        ${unlinked}
+        <div class="f-row"><div class="f"><label>Show</label>${seg}</div><div class="f"><label>Status</label><span class="seg">${[['', 'All'], ['Draft', 'Draft'], ['Ready for report', 'Ready'], ['open', 'Open follow-ups']].map(([k, l]) => `<button class="${st === k ? 'on' : ''}" data-fdst="${k}">${l}</button>`).join('')}</span></div>
           <div class="f"><label for="fdQ">Search</label><input type="search" id="fdQ" value="${U.esc(vs.fdQ || '')}"></div></div>
         <ul class="defs" style="margin-top:10px"><li><span class="lbl-obs">Observation</span> what the data or coded events show.</li><li><span class="lbl-obs">Evidence</span> the statistic, count, sample and match behind it.</li><li><span class="lbl-int">Interpretation</span> what the analyst thinks it may mean.</li><li><span class="lbl-q">Review question</span> what to check in footage or discuss.</li><li><span class="lbl-act">Follow-up</span> what staff may revisit in training or a later match.</li></ul>
       </section>
-      ${hz === 'week' ? weekHTML : seasonHTML}
-      <section class="sec card"><div class="card-h"><div><h2>Follow-up tracker</h2><p>${hz === 'week' ? 'Follow-ups from weekly findings.' : 'Follow-ups from season findings.'}</p></div></div>${Lab.followTable(hz === 'week' ? weekly : season, hz === 'week')}</section>`;
-      const addWeek = id => { Lab.newFinding({ title: 'New finding', source: 'Analyst observation', matchIds: [id], week: id }); };
-      const nb = U.$('#fdNew', el); if (nb) nb.onclick = () => hz === 'week' ? addWeek(U.$('#fdWeek', el).value) : Lab.newFinding({ title: 'New finding', source: 'Analyst observation', reviewId: '', week: '' });
+      ${hz === 'all' ? weekHTML + seasonHTML + oppHTML : hz === 'week' ? weekHTML : hz === 'season' ? seasonHTML : oppHTML}
+      ${T && hz !== 'opp' ? `<section class="sec card"><div class="card-h"><div><h2>Follow-up tracker</h2><p>Follow-ups from ${hz === 'season' ? 'season' : hz === 'week' ? 'weekly' : 'our team'} findings.</p></div></div>${Lab.followTable(hz === 'season' ? season : hz === 'week' ? weekly : all, hz !== 'season')}</section>` : ''}`;
+      const addWeek = id => Lab.newFinding({ title: 'New finding', source: 'Analyst observation', workspaceId: T.id, matchIds: [id], week: id });
+      const addSeason = () => Lab.newFinding({ title: 'New finding', source: 'Analyst observation', workspaceId: T.id, reviewId: '', week: '' });
+      const nb = U.$('#fdNew', el); if (nb) nb.onclick = () => addWeek(U.$('#fdWeek', el).value);
+      U.$$('[data-szadd]', el).forEach(b => b.onclick = addSeason);
       const wsel = U.$('#fdWeek', el); if (wsel) wsel.onchange = () => { vs.fdWeek = wsel.value; };
       U.$$('[data-fdhz]', el).forEach(b => b.onclick = () => { vs.fdHz = b.dataset.fdhz; Lab.render(); });
       U.$$('[data-wkadd]', el).forEach(b => b.onclick = () => addWeek(b.dataset.wkadd));
+      U.$$('[data-oadd]', el).forEach(b => b.onclick = () => Lab.newFinding({ title: 'New finding', source: 'Analyst observation', workspaceId: b.dataset.oadd }));
       U.$$('[data-wkrep]', el).forEach(b => b.onclick = () => { vs.repHz = 'week'; vs.repWeek = b.dataset.wkrep; vs.reportPreview = false; Lab.go('report'); });
       U.$$('[data-sznrep]', el).forEach(b => b.onclick = () => { vs.repHz = 'season'; vs.reportPreview = false; Lab.go('report'); });
+      U.$$('[data-orep]', el).forEach(b => b.onclick = () => { vs.repHz = 'opp'; vs.repOpp = b.dataset.orep; vs.reportPreview = false; Lab.go('report'); });
       U.$$('[data-fdst]', el).forEach(b => b.onclick = () => { vs.fdStatus = b.dataset.fdst; Lab.render(); });
       let t; const q = U.$('#fdQ', el); q.oninput = () => { clearTimeout(t); t = setTimeout(() => { vs.fdQ = q.value; Lab.render(); const n = U.$('#fdQ'); if (n) { n.focus(); n.setSelectionRange(n.value.length, n.value.length); } }, 250); };
-      U.$$('[data-openrv]', el).forEach(b => b.onclick = () => Lab.openReview(b.dataset.openrv, 'findings'));
+      U.$$('[data-openrv]', el).forEach(b => b.onclick = () => { toTeam(T); Lab.openReview(b.dataset.openrv, 'findings'); });
       Lab.wireFindingCards(el);
     }
   };
@@ -412,17 +416,17 @@
   function scopeOf(ws) {
     const ms = M.wsMatches(ws);
     if (vs.repScope) { const r0 = M.review(vs.repScope); if (r0 && r0.workspaceId === ws.id) { vs.repHz = 'week'; vs.repWeek = r0.matchId; } vs.repScope = ''; }
-    const weeksWith = ms.filter(m => M.weekFindings(m.id).length);
-    if (!vs.repHz) vs.repHz = weeksWith.length || !M.wsFindings('').length ? 'week' : 'season';
+    const weeksWith = ms.filter(m => M.weekFindings(m.id, ws).length);
+    if (!vs.repHz || vs.repHz === 'opp') vs.repHz = weeksWith.length || !M.wsFindings('', ws).length ? 'week' : 'season';
     const weekly = vs.repHz !== 'season' && ms.length;
     if (!weekly) {
       const meta = (ws.report = ws.report || { title: '', intro: '' });
-      return { weekly: false, id: '', m: null, rv: null, meta, opp: '', ms, defTitle: `${ws.focus} ${ws.season}: season report`, items: M.wsFindings(''), save: patch => M.updateWorkspace(ws.id, { report: Object.assign({}, meta, patch) }) };
+      return { weekly: false, id: '', m: null, rv: null, meta, opp: '', ms, defTitle: `${ws.focus} ${ws.season}: season report`, items: M.wsFindings('', ws), save: patch => M.updateWorkspace(ws.id, { report: Object.assign({}, meta, patch) }) };
     }
     const m = ms.find(x => x.id === vs.repWeek) || weeksWith[weeksWith.length - 1] || ms[ms.length - 1];
-    const rv = M.reviewFor(m.id), opp = M.opponentIn(m, ws.focus);
+    const rv = M.reviewFor(m.id, ws), opp = M.opponentIn(m, ws.focus);
     const all = ws.weekReports || {}, meta = Object.assign({ title: '', intro: '' }, rv && rv.report, all[m.id]);
-    return { weekly: true, id: m.id, m, rv, meta, opp, ms, defTitle: `${ws.focus} v ${opp}, ${m.round} ${m.season}: weekly report`, items: M.weekFindings(m.id),
+    return { weekly: true, id: m.id, m, rv, meta, opp, ms, defTitle: `${ws.focus} v ${opp}, ${m.round} ${m.season}: weekly report`, items: M.weekFindings(m.id, ws),
       save: patch => M.updateWorkspace(ws.id, { weekReports: Object.assign({}, ws.weekReports || {}, { [m.id]: Object.assign({}, meta, patch) }) }) };
   }
   const opt = (meta, k) => !meta.hide || !meta.hide[k];
@@ -449,13 +453,13 @@
     return `<table class="compact"><thead><tr><th class="l">Data</th><th class="l">Status</th><th class="l">Detail</th></tr></thead><tbody>${items.map(c => `<tr><td class="l">${U.esc(c.label)}</td><td class="l">${Lab.MD.STATE_LABEL[c.state]}</td><td class="l wrap">${U.esc(c.text)}${c.src ? ` <span class="muted">(${U.esc(c.src)})</span>` : ''}</td></tr>`).join('')}</tbody></table>`;
   }
   function seasonBlock(ws) {
-    const revs = M.reviews();
+    const revs = M.reviews(ws);
     return `<table class="compact"><thead><tr><th class="l">Match</th><th class="l">Result</th><th>Findings</th></tr></thead><tbody>${revs.map(r => { const m = M.match(r.matchId), rr = Lab.MD.result(m, ws.focus, r); return `<tr><td class="l">${U.esc(M.matchLabel(m, ws.focus))}</td><td class="l">${rr ? `${rr.res} ${U.signed(rr.margin)} (${rr.us}-${rr.them})` : '–'}</td><td>${M.wsFindings(r.id).length}</td></tr>`; }).join('') || '<tr><td class="l muted" colspan="3">No match reviews yet.</td></tr>'}</tbody></table>`;
   }
   function followRows(items) { const rows = items.filter(f => f.followUp); return rows.length ? `<table class="compact"><thead><tr><th class="l">Follow-up focus</th><th class="l">From finding</th><th class="l">Who</th><th class="l">When</th><th class="l">Status</th></tr></thead><tbody>${rows.map(f => `<tr><td class="l wrap">${U.esc(f.followUp)}</td><td class="l wrap">${U.esc(f.title)}</td><td class="l">${U.esc(f.followOwner || '–')}</td><td class="l">${U.esc(f.followWhen || '–')}</td><td class="l">${U.esc(f.followStatus)}</td></tr>`).join('')}</tbody></table>` : ''; }
   const CAVEAT = 'Prepared from built-in season data, imported stats and events coded by club staff. Numbers describe what was recorded, with their sample and source; they do not explain why it happened. Analyst interpretation, review questions and follow-up focus are staff opinion and discussion points, not conclusions or instructions.';
 
-  function reportHTML(ws, S) {
+  function reportHTML(ws, S, oo) {
     const items = S.items.filter(f => f.inReport), meta = S.meta;
     const m = S.m;
     const allClips = [...new Set(items.flatMap(f => f.clipIds || []))].map(id => M.state.clips.find(c => c.id === id)).filter(Boolean);
@@ -467,11 +471,12 @@
       ${S.weekly && opt(meta, 'coverage') ? `<h2>Data used</h2>${coverageBlock(ws, S)}` : ''}
       ${!S.weekly ? `<h2>Matches reviewed</h2>${seasonBlock(ws)}` : ''}
       <h2>Findings</h2>${items.length ? items.map(findingHTML).join('') : '<p class="muted">No findings selected for the report yet.</p>'}
+      ${oo ? oppSection(oo) : ''}
       ${opt(meta, 'followups') && followRows(items) ? `<h2>Follow-up list</h2>${followRows(items)}` : ''}
       ${opt(meta, 'clips') && allClips.length ? `<h2>Clips referenced</h2><ol class="small">${allClips.map(c => `<li>${U.esc(clipLine(c))}</li>`).join('')}</ol><p class="small muted">Clips are in and out points on the club's own match video. Club Lab doesn't host or edit video.</p>` : ''}
       <p class="caveat">${CAVEAT}</p></article>`;
   }
-  function markdown(ws, S) {
+  function markdown(ws, S, oo) {
     const items = S.items.filter(f => f.inReport), meta = S.meta, L = [`# ${meta.title || S.defTitle}`, `${S.weekly ? 'Internal weekly report' : 'Internal season report'}, prepared ${U.today()}. ${[ws.competition, S.m ? S.m.round : ws.season, S.m ? S.m.date : '', S.m ? S.m.venue : ''].filter(Boolean).join(' · ')}`, ''];
     if (meta.intro) L.push(meta.intro, '');
     if (S.weekly && opt(meta, 'result')) { const r = Lab.MD.result(S.m, ws.focus, S.rv); if (r) L.push('## Result', `${ws.focus} ${r.us}, ${S.opp} ${r.them} (${r.res} ${U.signed(r.margin)}).${r.quarters ? ' By quarter: ' + [0, 1, 2, 3].map(i => `Q${i + 1} ${r.qUs[i]}-${r.qThem[i]}`).join(', ') + '.' : ''} Source: ${r.src}.`, ''); }
@@ -490,17 +495,19 @@
       if (f.limitations) L.push(`_Limitations: ${f.limitations}_`);
       L.push('');
     });
+    if (oo) { const oi = M.findingsOf(oo).filter(f => f.inReport); L.push(`## Opponent: ${oo.opponent}`); oppItemsMD(oi, L); }
     const fu = items.filter(f => f.followUp);
     if (opt(meta, 'followups') && fu.length) L.push('## Follow-up list', ...fu.map(f => `- ${f.followUp} (from "${f.title}"; ${[f.followOwner, f.followWhen, f.followStatus].filter(Boolean).join(', ')})`), '');
     L.push(`_${CAVEAT}_`);
     return L.join('\n');
   }
-  function present(ws, S) {
+  function present(ws, S, oo) {
     const items = S.items.filter(f => f.inReport), meta = S.meta;
     const r = S.weekly ? Lab.MD.result(S.m, ws.focus, S.rv) : null;
     const slides = [`<div class="slide title"><span class="dam-pin">${S.weekly ? 'Weekly report' : 'Season report'}</span><h1>${S.weekly ? `${U.esc(ws.focus)} v <em>${U.esc(S.opp)}</em>` : `${U.esc(ws.focus)} <em>${U.esc(ws.season)}</em>`}</h1><p>${U.esc([ws.competition, S.m ? S.m.round : ws.season, S.m ? S.m.date : '', S.m ? S.m.venue : ''].filter(Boolean).join(' · '))}${r ? ` · ${r.res} ${U.signed(r.margin)}, ${r.us}-${r.them}` : ''}</p>${meta.intro ? `<p class="lead">${U.esc(meta.intro)}</p>` : ''}</div>`]
       .concat(S.weekly && opt(meta, 'result') && r && r.quarters ? [`<div class="slide"><h2>By quarter</h2>${Lab.MD.chart({ kind: 'mQuarters', matchId: S.m.id })}</div>`] : [])
-      .concat(items.map((f, i) => `<div class="slide"><span class="k">Finding ${i + 1} of ${items.length}</span><h2>${U.esc(f.title)}</h2>${f.observation ? `<p class="lead">${U.esc(f.observation)}</p>` : ''}<div class="slide-grid"><div>${chartFor(f) || ''}</div><div>${f.stat ? `<p><span class="lbl-obs">Evidence</span><br>${U.esc(f.stat)}</p>` : ''}${f.interpretation ? `<p><span class="lbl-int">Analyst interpretation</span><br>${U.esc(f.interpretation)}</p>` : ''}${f.question ? `<p><span class="lbl-q">Review question</span><br>${U.esc(f.question)}</p>` : ''}${f.followUp ? `<p><span class="lbl-act">Follow-up focus</span><br>${U.esc(f.followUp)}</p>` : ''}${(f.clipIds || []).length ? `<p class="small">Clips: ${(f.clipIds || []).map(id => M.state.clips.find(c => c.id === id)).filter(Boolean).map(c => U.esc(c.title)).join('; ')}</p>` : ''}</div></div></div>`));
+      .concat(items.map((f, i) => `<div class="slide"><span class="k">Finding ${i + 1} of ${items.length}</span><h2>${U.esc(f.title)}</h2>${f.observation ? `<p class="lead">${U.esc(f.observation)}</p>` : ''}<div class="slide-grid"><div>${chartFor(f) || ''}</div><div>${f.stat ? `<p><span class="lbl-obs">Evidence</span><br>${U.esc(f.stat)}</p>` : ''}${f.interpretation ? `<p><span class="lbl-int">Analyst interpretation</span><br>${U.esc(f.interpretation)}</p>` : ''}${f.question ? `<p><span class="lbl-q">Review question</span><br>${U.esc(f.question)}</p>` : ''}${f.followUp ? `<p><span class="lbl-act">Follow-up focus</span><br>${U.esc(f.followUp)}</p>` : ''}${(f.clipIds || []).length ? `<p class="small">Clips: ${(f.clipIds || []).map(id => M.state.clips.find(c => c.id === id)).filter(Boolean).map(c => U.esc(c.title)).join('; ')}</p>` : ''}</div></div></div>`))
+      .concat(oo ? [`<div class="slide title"><span class="dam-pin">Opponent</span><h1><em>${U.esc(oo.opponent)}</em></h1></div>`].concat(oppSlides(oo, M.findingsOf(oo).filter(f => f.inReport))) : []);
     let i = 0;
     const ov = document.createElement('div'); ov.className = 'present'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'Presentation');
     const draw = () => { ov.innerHTML = `${slides[i]}<div class="present-bar"><span>${i + 1} / ${slides.length}</span><span>← → to move · Esc to exit</span><button class="btn sm" data-x>Exit</button></div>`; ov.querySelector('[data-x]').onclick = close; ov.querySelector('[data-x]').focus(); };
@@ -515,7 +522,7 @@
     const team = X.resolve(ws.focus); if (!team) return '';
     const S = Lab.Season, groups = [...new Set(S.COLUMNS.map(c => c.group))];
     const ros = X.roster(team).filter(p => p.games);
-    return `<section class="sec card"><div class="card-h"><div><h2>Add a season stat</h2><p>${U.esc(X.raw.competition + ' ' + X.raw.season)} season data for ${U.esc(team)}. Each one becomes ${Lab.isOpp() ? 'a brief item' : 'a season finding'} you can edit.</p></div></div>
+    return `<section class="sec card"><div class="card-h"><div><h2>Add a season stat</h2><p>${U.esc(X.raw.competition + ' ' + X.raw.season)} season data for ${U.esc(team)}. Each one becomes ${ws.kind === 'opp' ? `a ${U.esc(ws.opponent)} finding` : 'a season finding'} you can edit.</p></div></div>
       <div class="grid g2">
         <div><h3>Team</h3><div class="form">
           <label>For or against<select id="aSide"><option value="for">${Lab.isOpp() ? 'Their own' : 'Ours'}</option><option value="against">Conceded</option></select></label>
@@ -535,44 +542,69 @@
   }
 
   Lab.Views.report = {
-    render(el, { ws }) {
-      if (Lab.isOpp()) return oppReportView(el, ws);
-      const S = scopeOf(ws), meta = S.meta, list = S.items;
-      const nSeason = M.wsFindings('').length, nWeekly = M.wsFindings().length - nSeason;
-      const seg = `<div class="f"><label>Report type</label><span class="seg" role="group" aria-label="Report type">${[['week', `Weekly (${nWeekly})`], ['season', `Season (${nSeason})`]].map(([k, l]) => `<button class="${(k === 'week') === S.weekly ? 'on' : ''}" data-rhz="${k}">${l}</button>`).join('')}</span></div>`;
-      const scopeSel = seg + (S.weekly ? `<div class="f"><label for="rScope">Week</label><select id="rScope" style="min-width:260px">${S.ms.slice().reverse().map(m => `<option value="${m.id}" ${m.id === S.id ? 'selected' : ''}>${U.esc(M.matchLabel(m, ws.focus))} (${M.weekFindings(m.id).length})</option>`).join('')}</select></div>` : '');
+    render(el) {
+      const { w, T, O } = ctx();
+      const types = (T ? [['week', 'Weekly'], ['season', 'Season']] : []).concat(O.length ? [['opp', 'Opponent']] : []);
+      if (!types.length) { el.innerHTML = `<div class="empty"><h3>Nothing to report yet</h3><p>Choose a team season or an opponent first.</p></div>`; return; }
+      if (!vs.repHz && w && w.kind === 'opp' && O.length) vs.repHz = 'opp';
+      const isOppRep = vs.repHz === 'opp' ? !!O.length : !T;
+      const o = O.find(x => x.id === vs.repOpp) || (w && w.kind === 'opp' ? w : O[0]);
+      const S = !isOppRep ? scopeOf(T) : null;
+      const withOpp = !isOppRep ? (vs.repWithOpp === undefined ? (w && w.kind === 'opp' ? w : null) : O.find(x => x.id === vs.repWithOpp) || null) : null;
+      const hz = isOppRep ? 'opp' : S.weekly ? 'week' : 'season';
+      const nSeason = T ? M.wsFindings('', T).length : 0, nWeekly = T ? M.wsFindings(undefined, T).length - nSeason : 0, nOpp = O.reduce((n, x) => n + M.findingsOf(x).length, 0);
+      const counts = { week: nWeekly, season: nSeason, opp: nOpp };
+      const seg = `<div class="f"><label>Report type</label><span class="seg" role="group" aria-label="Report type">${types.map(([k, l]) => `<button class="${k === hz ? 'on' : ''}" data-rhz="${k}">${l} (${counts[k]})</button>`).join('')}</span></div>`;
+      const weekSel = !isOppRep && S.weekly ? `<div class="f"><label for="rScope">Week</label><select id="rScope" style="min-width:240px">${S.ms.slice().reverse().map(m => `<option value="${m.id}" ${m.id === S.id ? 'selected' : ''}>${U.esc(M.matchLabel(m, T.focus))} (${M.weekFindings(m.id, T).length})</option>`).join('')}</select></div>` : '';
+      const oppSel = isOppRep ? `<div class="f"><label for="rOppSel">Opponent</label><select id="rOppSel">${O.map(x => `<option value="${x.id}" ${x === o ? 'selected' : ''}>${U.esc(x.opponent)} (${M.findingsOf(x).length})</option>`).join('')}</select></div>`
+        : O.length ? `<div class="f"><label for="rWith">Opponent section</label><select id="rWith"><option value="">None</option>${O.map(x => `<option value="${x.id}" ${x === withOpp ? 'selected' : ''}>${U.esc(x.opponent)} (${M.findingsOf(x).length})</option>`).join('')}</select></div>` : '';
+      const teamItems = isOppRep ? [] : S.items, oppItems = isOppRep ? M.findingsOf(o) : withOpp ? M.findingsOf(withOpp) : [];
+      const meta = isOppRep ? (o.report = o.report || { title: '', intro: '' }) : S.meta;
+      const save = isOppRep ? patch => M.updateWorkspace(o.id, { report: Object.assign({}, o.report, patch) }) : S.save;
+      const defTitle = isOppRep ? oppTitle(o) : S.defTitle + (withOpp ? ` and ${withOpp.opponent} preview` : '');
+      const html = () => isOppRep ? oppBrief(o) : reportHTML(T, S, withOpp);
+      const md = () => isOppRep ? oppMarkdown(o) : markdown(T, S, withOpp);
+      const pres = () => isOppRep ? oppPresent(o) : present(T, S, withOpp);
+      const fname = isOppRep ? `opponent-report-${U.norm(o.opponent)}` : S.weekly ? `weekly-report-${U.norm(S.m.round)}-${U.norm(S.opp)}` : `season-report-${U.norm(T.focus)}`;
       if (vs.reportPreview) {
-        el.innerHTML = `<div class="ctl no-print" style="margin-bottom:10px"><button class="btn" id="rBack">← Back to edit</button><button class="btn p" id="rPrint">Print or save as PDF</button><button class="btn" id="rMd">Download Markdown</button><button class="btn g" id="rPres">Present</button></div>${reportHTML(ws, S)}`;
+        el.innerHTML = `<div class="ctl no-print" style="margin-bottom:10px"><button class="btn" id="rBack">← Back to edit</button><button class="btn p" id="rPrint">Print or save as PDF</button><button class="btn" id="rMd">Download Markdown</button><button class="btn g" id="rPres">Present</button></div>${html()}`;
         U.$('#rBack', el).onclick = () => { vs.reportPreview = false; Lab.render(); };
         U.$('#rPrint', el).onclick = () => { el.classList.add('printing'); window.print(); el.classList.remove('printing'); };
-        U.$('#rMd', el).onclick = () => U.download(`${S.weekly ? 'weekly-report-' + U.norm(S.m.round) + '-' + U.norm(S.opp) : 'season-report-' + U.norm(ws.focus)}-${U.today()}.md`, markdown(ws, S), 'text/markdown;charset=utf-8');
-        U.$('#rPres', el).onclick = () => present(ws, S);
+        U.$('#rMd', el).onclick = () => U.download(`${fname}-${U.today()}.md`, md(), 'text/markdown;charset=utf-8');
+        U.$('#rPres', el).onclick = pres;
         return;
       }
-      const inRep = list.filter(f => f.inReport), drafts = inRep.filter(f => f.status !== 'Ready for report').length;
+      const inRep = teamItems.concat(oppItems).filter(f => f.inReport), drafts = teamItems.filter(f => f.inReport && f.status !== 'Ready for report').length;
       const hide = meta.hide || {};
+      const teamSec = isOppRep ? '' : `<section class="sec card"><div class="card-h"><div><span class="k">Our team · ${S.weekly ? 'weekly' : 'season'}</span><h2>${S.weekly ? `Findings this week (${teamItems.length})` : `Season findings (${teamItems.length})`}</h2><p>${S.weekly ? (S.rv ? 'From the match review and notes for this week.' : 'Notes for this week. Start a match review to add findings straight from the stats.') : 'Add from the Team and Players tabs with +, from Explore with + Finding, or below.'}</p></div><div class="ctl">${S.weekly ? `<button class="btn" id="rToRv">${S.rv ? 'Open match review' : 'Start match review'}</button>` : ''}<button class="btn" id="fBlank">+ ${S.weekly ? 'Weekly' : 'Season'} finding</button></div></div>
+        ${teamItems.length ? Lab.findingCards(teamItems) : `<div class="empty"><h3>No findings here yet</h3><p>${S.weekly ? 'Use + next to stats in the match review, or write one from scratch.' : 'Add season stats from the Team and Players tabs, or findings from Explore.'}</p></div>`}</section>`;
+      const ob = isOppRep ? o : withOpp;
+      const oppSec = !ob ? '' : `<section class="sec card"><div class="card-h"><div><span class="k">Opponent</span><h2>${U.esc(ob.opponent)} (${oppItems.length})</h2><p>Findings from scouting ${U.esc(ob.opponent)}: their stats, analysed games and coding.</p></div><div class="ctl"><button class="btn" id="oBlank">+ Opponent finding</button></div></div>
+        ${oppItems.length ? Lab.findingCards(oppItems) : `<div class="empty"><h3>No opponent findings yet</h3><p>In Opponent mode for ${U.esc(ob.opponent)}, use + on their stats, analysed games and coding.</p></div>`}</section>`;
+      const panelWs = isOppRep ? (w === o ? o : null) : (!S.weekly && w === T ? T : null);
       el.innerHTML = `
-      <section class="card"><div class="card-h"><div><h2>Report</h2><p>A concise internal report for coaches: choose the findings, put them in order, then preview, print or save as PDF, download Markdown or present. <b>Weekly</b> covers one match week: the match review plus any notes for that week. <b>Season</b> is the longer-term picture. Neither is an opposition brief.</p></div>
+      <section class="card"><div class="card-h"><div><h2>Report</h2><p>One report for coaches from everything you've found. <b>Weekly</b>: one match week of ${T ? U.esc(T.focus) : 'our team'}, the review plus notes. <b>Season</b>: the longer-term picture. <b>Opponent</b>: what you found scouting them. Add an opponent section to a weekly or season report for a review-and-preview in one.</p></div>
         <div class="ctl"><button class="btn g" id="rOpen" ${inRep.length ? '' : 'disabled'}>Preview report</button><button class="btn" id="rPres2" ${inRep.length ? '' : 'disabled'}>Present</button></div></div>
-        <div class="f-row" style="margin-bottom:10px">${scopeSel}</div>
-        <div class="form"><label>Report title<input id="rTitle" value="${U.esc(meta.title || '')}" placeholder="${U.esc(S.defTitle)}"></label><label>Summary for coaches (2–3 lines)<input id="rIntro" value="${U.esc(meta.intro || '')}" placeholder="What matters most from this ${S.weekly ? 'week' : 'season so far'}"></label></div>
-        <div class="ctl" style="margin-top:10px">${(S.weekly ? [['result', 'Result and quarters'], ['coverage', 'Data used']] : []).concat([['followups', 'Follow-up list'], ['clips', 'Clips referenced']]).map(([k, l]) => `<label class="cb"><input type="checkbox" data-show="${k}" ${hide[k] ? '' : 'checked'}> ${l}</label>`).join('')}</div>
+        <div class="f-row" style="margin-bottom:10px">${seg}${weekSel}${oppSel}</div>
+        <div class="form"><label>Report title<input id="rTitle" value="${U.esc(meta.title || '')}" placeholder="${U.esc(defTitle)}"></label><label>Summary for coaches (2–3 lines)<input id="rIntro" value="${U.esc(meta.intro || '')}" placeholder="What matters most"></label></div>
+        ${isOppRep ? '' : `<div class="ctl" style="margin-top:10px">${(S.weekly ? [['result', 'Result and quarters'], ['coverage', 'Data used']] : []).concat([['followups', 'Follow-up list'], ['clips', 'Clips referenced']]).map(([k, l]) => `<label class="cb"><input type="checkbox" data-show="${k}" ${hide[k] ? '' : 'checked'}> ${l}</label>`).join('')}</div>`}
         ${drafts ? `<p class="warnline">${drafts} finding${drafts === 1 ? ' is' : 's are'} still marked Draft and will show as Draft in the report.</p>` : ''}
       </section>
-      <section class="sec card"><div class="card-h"><div><h2>${S.weekly ? `Findings this week (${list.length})` : `Season findings (${list.length})`}</h2><p>${S.weekly ? (S.rv ? 'From the match review and notes for this week.' : 'Notes for this week. Start a match review to add findings straight from the stats.') : 'Add from the Team and Players tabs with +, from Explore with + Finding, or below.'}</p></div><div class="ctl">${S.weekly ? `<button class="btn" id="rToRv">${S.rv ? 'Open match review' : 'Start match review'}</button>` : ''}<button class="btn" id="fBlank">+ ${S.weekly ? 'Weekly' : 'Season'} finding</button></div></div>
-        ${list.length ? Lab.findingCards(list) : `<div class="empty"><h3>No findings here yet</h3><p>${S.weekly ? 'Use + next to stats in the match review, or write one from scratch.' : 'Add season stats from the Team and Players tabs, or findings from Explore.'}</p></div>`}
-      </section>
-      ${S.weekly ? '' : addPanel(ws)}`;
-      wireAdd(el, ws);
+      ${teamSec}${oppSec}
+      ${panelWs ? addPanel(panelWs) : ''}`;
+      if (panelWs) wireAdd(el, panelWs);
       U.$$('[data-rhz]', el).forEach(b => b.onclick = () => { vs.repHz = b.dataset.rhz; Lab.render(); });
       const rs = U.$('#rScope', el); if (rs) rs.onchange = e => { vs.repWeek = e.target.value; Lab.render(); };
-      U.$('#rTitle', el).onchange = e => S.save({ title: e.target.value });
-      U.$('#rIntro', el).onchange = e => S.save({ intro: e.target.value });
-      U.$$('[data-show]', el).forEach(c => c.onchange = () => S.save({ hide: Object.assign({}, hide, { [c.dataset.show]: !c.checked }) }));
+      const ros = U.$('#rOppSel', el); if (ros) ros.onchange = e => { vs.repOpp = e.target.value; Lab.render(); };
+      const rw = U.$('#rWith', el); if (rw) rw.onchange = e => { vs.repWithOpp = e.target.value; Lab.render(); };
+      U.$('#rTitle', el).onchange = e => save({ title: e.target.value });
+      U.$('#rIntro', el).onchange = e => save({ intro: e.target.value });
+      U.$$('[data-show]', el).forEach(c => c.onchange = () => save({ hide: Object.assign({}, hide, { [c.dataset.show]: !c.checked }) }));
       U.$('#rOpen', el).onclick = () => { vs.reportPreview = true; Lab.render(); };
-      U.$('#rPres2', el).onclick = () => present(ws, S);
-      const tr = U.$('#rToRv', el); if (tr) tr.onclick = () => Lab.openReview(S.m.id, S.rv ? 'findings' : undefined);
-      U.$('#fBlank', el).onclick = () => S.weekly ? Lab.newFinding({ title: 'New finding', source: 'Analyst observation', matchIds: [S.m.id], week: S.m.id }) : Lab.newFinding({ title: 'New finding', source: 'Analyst observation', reviewId: '', week: '' });
+      U.$('#rPres2', el).onclick = pres;
+      const tr = U.$('#rToRv', el); if (tr) tr.onclick = () => { toTeam(T); Lab.openReview(S.m.id, S.rv ? 'findings' : undefined); };
+      const fb = U.$('#fBlank', el); if (fb) fb.onclick = () => S.weekly ? Lab.newFinding({ title: 'New finding', source: 'Analyst observation', workspaceId: T.id, matchIds: [S.m.id], week: S.m.id }) : Lab.newFinding({ title: 'New finding', source: 'Analyst observation', workspaceId: T.id, reviewId: '', week: '' });
+      const obb = U.$('#oBlank', el); if (obb) obb.onclick = () => Lab.newFinding({ title: 'New finding', source: 'Analyst observation', workspaceId: ob.id });
       Lab.wireFindingCards(el);
     }
   };

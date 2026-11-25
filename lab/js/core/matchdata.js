@@ -10,7 +10,8 @@
 
   /* ---------- built-in results ---------- */
   const X = () => (Lab.Pack && Lab.Pack.ok ? Lab.Pack : null);
-  const who = () => (Lab.isOpp && Lab.isOpp() ? 'their' : 'our');
+  let chartKind = null;
+  const who = () => ((chartKind ? chartKind === 'opp' : Lab.isOpp && Lab.isOpp()) ? 'their' : 'our');
   MD.packMatch = function (m) {
     const P = X(); if (!P || !m || String(m.season) !== P.raw.season) return null;
     if (m.packId) { const hit = P.matches.find(x => x.id === m.packId); if (hit) return hit; }
@@ -229,11 +230,16 @@
 
   /* ---------- charts for findings and the report (re-drawn from current data) ---------- */
   const C = () => Lab.Charts;
-  MD.chart = function (spec) {
-    const m = M.match(spec.matchId), w = M.ws(); if (!m || !w) return '';
+  /* w: the workspace the finding belongs to (our team or an opponent), so a chart reads the same in either mode. */
+  MD.chart = function (spec, w) {
+    w = w || M.ws(); chartKind = w ? w.kind : null;
+    try { return drawChart(spec, w); } finally { chartKind = null; }
+  };
+  function drawChart(spec, w) {
+    const m = M.match(spec.matchId); if (!m || !w) return '';
     const team = w.focus, opp = M.opponentIn(m, team), Ch = C();
     if (spec.kind === 'mQuarters') {
-      const r = MD.result(m, team, M.reviewFor(m.id)); if (!r || !r.quarters) return '';
+      const r = MD.result(m, team, M.reviewFor(m.id, w)); if (!r || !r.quarters) return '';
       return Ch.grouped(['Q1', 'Q2', 'Q3', 'Q4'], [{ name: team, color: Ch.COL.opp, values: r.qUs, tips: r.qUs.map(v => v + ' pts') }, { name: opp, color: Ch.COL.their, values: r.qThem, tips: r.qThem.map(v => v + ' pts') }], { fmt: v => U.round(v, 0), aria: 'Points scored in each quarter' })
         + `<p class="sub">Points in each quarter. ${[0, 1, 2, 3].map(i => `Q${i + 1} ${r.qUs[i]}-${r.qThem[i]}`).join(', ')}.</p>`;
     }
@@ -250,7 +256,7 @@
       return Ch.bars(rows.map(r => ({ label: r.name, value: r.v[spec.col], n: 99 })), { fmt: v => MD.fmt(c.unit, v) }) + `<p class="sub">${U.esc(c.label)}, top ${rows.length} for ${U.esc(spec.team || team)} in this match. Source: ${U.esc(pl.srcLabel)}.</p>`;
     }
     return '';
-  };
+  }
 
   Lab.MD = MD;
 })(window.Lab);

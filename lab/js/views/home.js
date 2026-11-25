@@ -26,7 +26,7 @@
       const steps = !w ? '' : opp
         ? `${stepCard(1, 'Scout the opponent', inData ? `Results, form, team stats, ratings and every player's numbers for ${U.esc(w.opponent)}.` : `${U.esc(w.opponent)} isn't in the season data. Edit the opponent and pick the club from the list.`, [['team', 'Team', true], ['players', 'Players']])}
           ${stepCard(2, 'Analyse their games', 'Add their games from the season results, open one to see its team and player stats, then code it, link vision and explore the patterns.', [['matches', 'Matches', true], ['review', 'Match analysis'], ['code', 'Code'], ['video', 'Video']])}
-          ${stepCard(3, 'Brief the coaches', 'Add stats and findings, then preview, print or present the brief.', [['findings', 'Findings'], ['report', 'Brief', true]])}`
+          ${stepCard(3, 'Report to coaches', 'Findings from scouting them sit with your own team findings. Put them in the report: on their own, or as a section of your weekly report.', [['findings', 'Findings'], ['report', 'Report', true]])}`
         : `${stepCard(1, 'Our team', inData ? `Results, form, team stats with league ranks and every player's numbers for ${U.esc(w.team)}.` : `${U.esc(w.team)} isn't in built-in season data for ${U.esc(w.competition + ' ' + w.season)}. Import stats on the Data tab, or edit the season and pick the club from the list.`, [['team', 'Team', true], ['players', 'Players']])}
           ${stepCard(2, 'Review a match', 'Pick a completed match, see what data it has, then look at the result, team stats and player stats for that game.', [['matches', 'Matches', true], ['review', 'Match review']])}
           ${stepCard(3, 'Code and clip (optional)', 'Code your own vision with templates, link video and cut clips. Not needed to review imported stats.', [['code', 'Code'], ['video', 'Video'], ['explore', 'Explore']])}
@@ -35,7 +35,7 @@
         <div class="card-h"><div><h2 class="sec-t">${title}</h2><p class="sub">${sub}</p></div><div class="ctl"><button class="btn${(kind === 'opp') === opp ? ' g' : ''}" data-new="${kind}">${btn}</button></div></div>
         ${list.length ? `<div class="fx-grid">${list.map(x => card(x, w)).join('')}</div>` : `<div class="empty"><h3>${empty[0]}</h3><p>${empty[1]}</p><button class="btn g" data-new="${kind}">${btn}</button></div>`}</section>`;
       const teamGroup = group('team', teams, 'Our team', 'One per club and season: season numbers, match reviews, findings and follow-ups.', '+ New team season', ['No team seasons yet', 'Start with your club and season to review your own games.']);
-      const oppGroup = group('opp', fixtures, 'Opponents', 'One per club you play: scout them, analyse their games and build the brief.', '+ New opponent', ['No opponents yet', 'Pick the club you play next to scout them.']);
+      const oppGroup = group('opp', fixtures, 'Opponents', 'One per club you play: scout them, analyse their games, and add what you find to the report.', '+ New opponent', ['No opponents yet', 'Pick the club you play next to scout them.']);
       el.innerHTML = `
       ${w ? `<section class="card">
         <div class="card-h"><div><h2>${opp ? `${U.esc(w.ourTeam || 'Our team')} v ${U.esc(w.opponent)}` : `${U.esc(w.team)} · ${U.esc([w.competition, w.season].filter(Boolean).join(' '))}`}</h2><p>${w.note ? U.esc(w.note) : opp ? 'Preparing for the next game: the opponent\'s numbers, their games coded and the brief.' : 'Your own team: season numbers, completed matches, coding and match reviews.'}</p></div>
@@ -44,7 +44,7 @@
         <h3 style="margin-top:16px">Progress</h3>${prog}
       </section>` : `<section class="card"><div class="card-h"><div><h2>Two modes, one workspace</h2><p>Matches, players, coded events and clips are shared, so a game you code once serves your own review and the scouting job when you play that club.</p></div></div>
         <div class="steps3" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div class="stepc"><span class="stepn">1</span><div><h3>Our team</h3><p>Your club across a season: team and player numbers, completed matches reviewed with the evidence, findings and follow-ups.</p><div class="ctl"><button class="btn sm g" data-new="team">+ New team season</button></div></div></div>
-        <div class="stepc"><span class="stepn">2</span><div><h3>Opponent</h3><p>The club you play next: form, team and player numbers, their games coded and clipped, and a brief for coaches.</p><div class="ctl"><button class="btn sm g" data-new="opp">+ New fixture</button></div></div></div></div></section>`}
+        <div class="stepc"><span class="stepn">2</span><div><h3>Opponent</h3><p>The club you play next: form, team and player numbers, their games coded and clipped, and findings that go in your report for coaches.</p><div class="ctl"><button class="btn sm g" data-new="opp">+ New fixture</button></div></div></div></div></section>`}
       ${opp ? oppGroup + teamGroup : teamGroup + oppGroup}
 
       <details class="sec card"><summary><b>Match clock settings</b></summary>

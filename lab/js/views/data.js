@@ -76,7 +76,7 @@
             <button class="btn sm" data-exp="players">Players</button><button class="btn sm" data-exp="matches">Matches</button><button class="btn sm" data-exp="teamstats">Team stats</button><button class="btn sm" data-exp="playerstats">Player stats</button>
             <select id="eTpl" class="mini">${M.state.templates.map(t => `<option value="${t.id}">${U.esc(t.name)}</option>`).join('')}</select><button class="btn sm" data-exp="events">Coded events</button>
             <label class="cb"><input type="checkbox" id="eAll"> All matches in the library, not just this team season</label></div>
-          <h3 style="margin-top:16px">Backup</h3><p class="sub">One file with everything in both modes: team seasons, match reviews, fixtures, findings, briefs, playlists and the shared match library. Old Opponent Lab backups can be restored here too.</p>
+          <h3 style="margin-top:16px">Backup</h3><p class="sub">One file with everything in both modes: team seasons, match reviews, opponents, findings, reports, playlists and the shared match library. Old Opponent Lab backups can be restored here too.</p>
           <div class="ctl" style="margin-top:6px"><button class="btn" id="bExp">Download backup (.json)</button><label class="btn" for="bIn" style="cursor:pointer">Restore backup…</label><input type="file" id="bIn" accept=".json" class="hidden"><button class="btn sm danger" id="bReset">Clear our-team records</button></div>
         </div>
       </section>
@@ -85,7 +85,7 @@
         <div class="grid g2" style="margin-top:8px">
           <ul class="notes-list">
             <li><b>Our team</b>Team seasons, match reviews, findings, follow-ups, report settings and playlists: this browser's local storage on this device, key <code>${U.esc(M.TKEY)}</code> (${Math.round(M.bytes('tl') / 1024)} KB). The same key the old Team Lab used.</li>
-            <li><b>Opponent and the match library</b>Fixtures, briefs and their findings, plus matches, players, stat definitions, imported team and player stats, coding templates, coded events, video links, timestamps and clips: key <code>${U.esc(M.KEY)}</code> (${Math.round(M.bytes() / 1024)} KB), the same key Opponent Lab used. ${(() => { const L = M.libraryInfo(); return `It holds ${L.fixtures} fixture${L.fixtures === 1 ? '' : 's'}, ${L.matches} matches, ${L.events} coded events and ${L.clips} clips.`; })()}</li>
+            <li><b>Opponent and the match library</b>Opponents, their reports and findings, plus matches, players, stat definitions, imported team and player stats, coding templates, coded events, video links, timestamps and clips: key <code>${U.esc(M.KEY)}</code> (${Math.round(M.bytes() / 1024)} KB), the same key Opponent Lab used. ${(() => { const L = M.libraryInfo(); return `It holds ${L.fixtures} fixture${L.fixtures === 1 ? '' : 's'}, ${L.matches} matches, ${L.events} coded events and ${L.clips} clips.`; })()}</li>
             <li><b>Built-in season data</b>Read from the data files in this folder. Never written to storage.</li>
           </ul>
           <ul class="notes-list">
@@ -122,7 +122,7 @@
       U.$$('[data-exp]', el).forEach(b => b.onclick = () => { const k = b.dataset.exp; const csv = I.exportKind(k, { templateId: U.$('#eTpl', el).value, allMatches: U.$('#eAll', el).checked }); U.download(`${k}${k === 'events' ? '-' + U.norm(M.template(U.$('#eTpl', el).value).name) : ''}-${U.today()}.csv`, csv, 'text/csv;charset=utf-8'); });
       U.$('#bExp', el).onclick = () => U.download(`club-lab-backup-${U.today()}.json`, M.exportAll(true), 'application/json');
       U.$('#bIn', el).onchange = e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { try { const o = M.readBackup(String(r.result)); if (o.oppOnly) { if (!confirm('This is an Opponent Lab backup. Replace the fixtures, briefs and match library in this browser with it? Our-team records stay.')) return; M.restore(o, true); U.toast('Opponent Lab backup restored'); return; } if (!confirm('Replace the our-team records (team seasons, reviews, findings) in this browser with the backup?')) return; const lib = !!o.library && confirm('The backup also has the fixtures, briefs and match library. Replace those too? Cancel keeps what is here now.'); M.restore(o, lib); U.toast('Backup restored' + (lib ? ' with the match library' : '')); } catch (err) { U.toast(err.message, 'warn'); } }; r.readAsText(f); };
-      U.$('#bReset', el).onclick = () => { if (confirm('Delete the our-team records (team seasons, match reviews, findings and playlists) in this browser? Fixtures, briefs and the match library (matches, stats, coded events, clips) are kept. Download a backup first if you need it.')) { pend = null; M.reset(); Lab.go('home'); } };
+      U.$('#bReset', el).onclick = () => { if (confirm('Delete the our-team records (team seasons, match reviews, findings and playlists) in this browser? Opponents, their reports and the match library (matches, stats, coded events, clips) are kept. Download a backup first if you need it.')) { pend = null; M.reset(); Lab.go('home'); } };
       const ipre = U.$('#iPre', el); if (ipre) ipre.onclick = () => Lab.reviewAct(vs.iKind === 'teamstats' ? 'tpl:team' : 'tpl:player', im);
       const ibk = U.$('#iBack', el); if (ibk) ibk.onclick = () => Lab.openReview(im.id);
       if (pend) {

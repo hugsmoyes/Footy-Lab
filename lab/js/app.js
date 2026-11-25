@@ -17,7 +17,7 @@
     { id: 'home', label: 'Home' },
     { grp: 'Opponent' }, { id: 'team', label: 'Team' }, { id: 'players', label: 'Players' },
     { grp: 'Their games' }, { id: 'matches', label: 'Matches', sec: 'matches' }, { id: 'review', label: 'Match analysis', sec: 'reviews' }, { id: 'code', label: 'Code', sec: 'coding' }, { id: 'video', label: 'Video', sec: 'video' }, { id: 'explore', label: 'Explore', sec: 'coding' },
-    { grp: '' }, { id: 'findings', label: 'Findings', sec: 'findings' }, { id: 'report', label: 'Brief', sec: 'report' },
+    { grp: '' }, { id: 'findings', label: 'Findings', sec: 'findings' }, { id: 'report', label: 'Report', sec: 'report' },
     { id: 'data', label: 'Data', right: true }
   ];
   const TABS = () => M.mode() === 'opp' ? TABS_OPP : TABS_TEAM;
@@ -41,7 +41,7 @@
     { id: 'coding', label: 'Coded events', tab: 'code' },
     { id: 'video', label: 'Video & clips', tab: 'video' },
     { id: 'findings', label: 'Findings', tab: 'findings' },
-    { id: 'report', label: 'Brief', tab: 'report' }
+    { id: 'report', label: 'Report', tab: 'report' }
   ];
   const sectionsFor = w => (w && w.kind === 'opp') ? SECTIONS_OPP : SECTIONS_TEAM;
   const plural = (n, w) => `${n} ${w}${n === 1 ? '' : /(ch|sh)$/.test(w) ? 'es' : 's'}`;
@@ -58,7 +58,7 @@
       coding: (() => { const ev = M.state.events.filter(e => ids.has(e.matchId)); const t = new Set(ev.map(e => e.templateId)).size; return { n: ev.length, text: ev.length ? `${ev.length} events, ${plural(t, 'template')}` : opp ? 'Nothing coded' : 'Nothing coded (optional)' }; })(),
       video: (() => { const v = ms.filter(m => (M.state.videos[m.id] || {}).url || (M.state.videos[m.id] || {}).fileName).length; const c = M.state.clips.filter(x => ids.has(x.matchId)).length; return { n: v + c, text: v || c ? `${plural(v, 'match video')}, ${plural(c, 'clip')}` : opp ? 'No video linked' : 'No video linked (optional)' }; })(),
       findings: { n: fl.length, text: fl.length ? `${plural(fl.length, 'finding')}${opp ? '' : `, ${fl.filter(x => x.followUp && x.followStatus !== 'Done').length} open follow-ups`}` : 'No findings yet' },
-      report: (() => { const n = fl.filter(x => x.inReport && (opp ? true : x.status === 'Ready for report')).length; return { n, text: n ? `${plural(n, 'finding')} ${opp ? 'in the brief' : 'ready for a report'}` : opp ? 'Nothing in the brief yet' : 'Nothing marked ready yet' }; })()
+      report: (() => { const n = fl.filter(x => x.inReport && (opp ? true : x.status === 'Ready for report')).length; return { n, text: n ? `${plural(n, 'finding')} ${opp ? 'in the report' : 'ready for a report'}` : opp ? 'Nothing in the brief yet' : 'Nothing marked ready yet' }; })()
     };
     const out = {};
     sectionsFor(w).forEach(s => { const f = facts[s.id]; out[s.id] = Object.assign({}, s, f, { state: (w.done || {})[s.id] ? 'complete' : f.n ? 'progress' : 'empty' }); });
@@ -80,7 +80,7 @@
     const pick = `<div class="ws-pick">${modeSeg}<label for="wsSel">${opp ? 'Opponent' : 'Team season'}</label><select id="wsSel"><option value="">${list.length ? (opp ? 'Choose an opponent…' : 'Choose a team season…') : (opp ? 'No opponents yet' : 'No team seasons yet')}</option>${list.map(x => `<option value="${x.id}" ${w && x.id === w.id ? 'selected' : ''}>${U.esc(Lab.wsLabel(x))}</option>`).join('')}</select><button class="btn sm on-dark" id="wsNew">${opp ? '+ New opponent' : '+ New team season'}</button></div>`;
     if (!w) {
       el.innerHTML = `<div><span class="dam-pin">Club Lab · Beta · ${opp ? 'Opponent' : 'Our team'}</span><h1>Club <em>Lab</em></h1><div class="ws-meta">${opp ? 'Scout the next opponent' : 'Review and code your own team'}</div>
-        <div class="ws-cov">${opp ? 'Pick the club you\'re playing to see their team and player numbers, analyse their games one by one, code and clip them, and build the brief for coaches.' : 'Choose your club and season to see your own team and player numbers, review completed matches, code your own vision and build match reviews for coaches.'} Switch modes any time: matches, coding and clips are shared.</div></div>${pick}`;
+        <div class="ws-cov">${opp ? 'Pick the club you\'re playing to see their team and player numbers, analyse their games one by one, code and clip them, and add what you find to the report for coaches.' : 'Choose your club and season to see your own team and player numbers, review completed matches, code your own vision and build match reviews for coaches.'} Switch modes any time: matches, coding and clips are shared.</div></div>${pick}`;
     } else {
       const st = sectionStatus(w);
       const meta = opp ? [w.competition, w.season, w.round ? 'Round ' + String(w.round).replace(/^r(ound)?\s*/i, '') : '', w.date, w.venue].filter(Boolean).map(U.esc).join(' · ') : [w.competition, w.season, w.note].filter(Boolean).map(U.esc).join(' · ');
@@ -165,7 +165,7 @@
   };
 
   /* Opponent form: pick the competition, season and opponent, the same way as our team season.
-     Next-game details are optional (they show on the brief). */
+     Next-game details are optional (they show on the report). */
   function oppForm(w) {
     const tw = M.workspaces('team').find(x => x.id === M.tl.workspaceId);
     const teamsFor = comp => [...new Set(Object.values(Lab.Packs || {}).filter(p => p.raw.competition === comp).flatMap(p => p.teams).concat(M.teams()))].sort();
