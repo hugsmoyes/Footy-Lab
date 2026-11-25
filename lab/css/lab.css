@@ -514,3 +514,5 @@ details.card>summary{cursor:pointer}
 @media (max-width:600px){.pf-top{grid-template-columns:1fr}.pf-row{grid-template-columns:1fr 56px 70px 30px}.pf-bar{display:none}}
 
 .chain-in{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.chain-in input{max-width:160px}.chain-in .btn kbd{margin-left:4px}
+.pick-f{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}.pick-f b{display:block}.pick-f .sub{font-size:12.5px}
+.ev-list{margin:2px 0 8px;padding-left:18px}.ev-list li{margin:2px 0}

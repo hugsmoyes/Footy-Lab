@@ -157,7 +157,7 @@
       U.$('#evSave', d).onclick = () => { const p = read(); if (p) { M.updateEvent(id, p); U.toast('Saved'); openEvent(id); } };
       U.$('#evClip', d).onclick = () => { const p = read(); if (!p) return; M.updateEvent(id, p); const x = M.event(id); Lab.openClip({ matchId: x.matchId, start: Math.max(0, x.video.time - 4), end: x.video.time + 12, eventId: id, tags: (x.tags || []).slice(), playerIds: tpl.fields.filter(f => f.type === 'player' && M.player(x.v[f.key])).map(f => x.v[f.key]), title: `${m.round} Q${x.period} ${x.clock} · ${tpl.name}` }); };
       U.$('#evVid', d).onclick = () => { vs.videoMatch = e.matchId; vs.videoEvent = id; Lab.closeDrawer(); Lab.go('video'); };
-      U.$('#evFd', d).onclick = () => Lab.newFinding({ title: `${m.round} Q${e.period} ${e.clock}: ${tpl.name}`, stat: `Single coded event (${tpl.name}), ${M.matchLabel(m, ws && ws.focus)} Q${e.period} ${e.clock}.`, n: 1, matchIds: [m.id], eventIds: [id], clipIds: clips.map(c => c.id), source: 'One coded event' });
+      U.$('#evFd', d).onclick = () => Lab.eventToFinding(id);
       U.$('#evDel', d).onclick = () => { if (confirm('Delete this event?')) { M.removeEvent(id); Lab.closeDrawer(); } };
     });
   }
@@ -234,7 +234,7 @@
       </div>
       <section class="sec card"><div class="card-h"><h2>Events (${evs.length})</h2></div>
         <div class="tw" style="max-height:520px;overflow:auto"><table class="compact"><thead><tr><th class="l">Match</th><th>Q</th><th>Clock</th><th class="l">Team</th>${tpl.fields.filter(f => f.type !== 'text').slice(0, 7).map(f => `<th class="l">${U.esc(f.label)}</th>`).join('')}<th class="l">Notes</th><th class="l"></th></tr></thead><tbody>
-        ${evs.slice().sort((a, b) => (mOrder.get(a.matchId) - mOrder.get(b.matchId)) || a.period - b.period || (A.derive(a).el ?? 0) - (A.derive(b).el ?? 0)).map(e => `<tr class="click${vs.selEvent === e.id ? ' sel' : ''}" data-open="${e.id}"><td class="l">${U.esc(M.match(e.matchId).round)}</td><td>${e.period}</td><td>${U.esc(e.clock)}</td><td class="l">${U.esc(e.team)}</td>${tpl.fields.filter(f => f.type !== 'text').slice(0, 7).map(f => `<td class="l">${e.v[f.key] == null || e.v[f.key] === '' ? '<span class="uncoded">–</span>' : U.esc(f.type === 'player' ? M.playerName(e.v[f.key]) : e.v[f.key])}</td>`).join('')}<td class="l wrap" style="min-width:200px;font-size:12px">${U.esc(e.notes || '')}</td><td class="l">${(e.tags || []).map(t => `<span class="tag">${U.esc(t)}</span>`).join('')}${e.video && e.video.time != null ? '<span class="badge2 clip">▶</span>' : ''}</td></tr>`).join('')}
+        ${evs.slice().sort((a, b) => (mOrder.get(a.matchId) - mOrder.get(b.matchId)) || a.period - b.period || (A.derive(a).el ?? 0) - (A.derive(b).el ?? 0)).map(e => `<tr class="click${vs.selEvent === e.id ? ' sel' : ''}" data-open="${e.id}"><td class="l">${U.esc(M.match(e.matchId).round)}</td><td>${e.period}</td><td>${U.esc(e.clock)}</td><td class="l">${U.esc(e.team)}</td>${tpl.fields.filter(f => f.type !== 'text').slice(0, 7).map(f => `<td class="l">${e.v[f.key] == null || e.v[f.key] === '' ? '<span class="uncoded">–</span>' : U.esc(f.type === 'player' ? M.playerName(e.v[f.key]) : e.v[f.key])}</td>`).join('')}<td class="l wrap" style="min-width:200px;font-size:12px">${U.esc(e.notes || '')}</td><td class="l">${(e.tags || []).map(t => `<span class="tag">${U.esc(t)}</span>`).join('')}${e.video && e.video.time != null ? '<span class="badge2 clip">▶</span>' : ''} <button class="btn sm" data-efd="${e.id}" title="Add this event to a finding">+ Finding</button></td></tr>`).join('')}
         </tbody></table></div></section>` : `<div class="empty"><h3>No events match these filters</h3><button class="btn" id="exClear2">Clear filters</button></div>`}`;
 
       // wiring
@@ -254,6 +254,7 @@
       U.$$('[data-xr]', el).forEach(td => td.onclick = () => { [[P.xr, td.dataset.xr], [P.xc, td.dataset.xc]].forEach(([k, v]) => { if (k.startsWith('_') || !tpl.fields.some(f => f.key === k && f.type !== 'player')) return; flt.f[k] = v; }); Lab.render(); });
       U.$$('[data-zone]', el).forEach(z => z.onclick = () => { flt.f[P.zone || tpl.fields.find(f => f.type === 'zone').key] = z.dataset.zone; Lab.render(); });
       U.$$('[data-open]', el).forEach(n => n.onclick = () => openEvent(n.dataset.open));
+      U.$$('[data-efd]', el).forEach(b => b.onclick = ev => { ev.stopPropagation(); Lab.eventToFinding(b.dataset.efd); });
       U.$$('[data-fd]', el).forEach(b => b.onclick = () => {
         const k = b.dataset.fd, c = CARDS.find(x => x[0] === k);
         let stat = `${A.describe(flt, ws, tpl)}: ${evs.length} ${tpl.unit}s across ${matchesIn.length} match${matchesIn.length === 1 ? '' : 'es'}.`;

@@ -95,6 +95,54 @@
     U.toast(Lab.isOpp() ? (f.inReport ? 'Added to the brief' : 'Finding saved') : f.reviewId ? 'Finding added to this match review' : f.week ? 'Weekly finding added' : 'Season finding added');
   };
 
+  /* One line describing a coded event: when, what, the coded values and notes. */
+  const evLines = f => (f.eventIds || []).map(id => M.event(id)).filter(Boolean).sort((a, b) => a.period - b.period || ((U.parseClock(a.clock) || 0) - (U.parseClock(b.clock) || 0)) * (M.state.settings.clockMode === 'elapsed' ? 1 : -1)).map(e => Lab.eventLine(e));
+  const pl = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+  const EVCAP = 6;
+  const evHTML = f => { const l = evLines(f); return l.length ? `<p class="small"><b>Coded events:</b></p><ul class="small ev-list">${l.slice(0, EVCAP).map(x => `<li>${U.esc(x)}</li>`).join('')}${l.length > EVCAP ? `<li class="muted">and ${l.length - EVCAP} more</li>` : ''}</ul>` : ''; };
+  const evMD = (f, L) => { const l = evLines(f); if (l.length) { L.push('Coded events:'); l.slice(0, EVCAP).forEach(x => L.push(`- ${x}`)); if (l.length > EVCAP) L.push(`- and ${l.length - EVCAP} more`); } };
+  Lab.eventLine = function (e, withNotes) {
+    const tpl = M.template(e.templateId) || { name: 'Event', fields: [] };
+    const vals = tpl.fields.filter(f => f.type !== 'text' && e.v[f.key] != null && e.v[f.key] !== '').map(f => `${f.label.toLowerCase()} ${f.type === 'player' ? M.playerName(e.v[f.key]) : String(e.v[f.key])}`);
+    return `Q${e.period} ${e.clock} · ${tpl.name} · ${e.team}${vals.length ? ': ' + vals.join(', ') : ''}${withNotes !== false && e.notes ? `. ${e.notes}` : ''}`;
+  };
+
+  /* Add coded events or clips to a finding: a new one, or one that already exists.
+     what: {eventIds, clipIds, matchId, title, stat, source, n, limitations, label} */
+  Lab.addToFinding = function (what) {
+    const ws = M.ws(); if (!ws) return;
+    const evIds = what.eventIds || [], clIds = (what.clipIds || []).concat(M.state.clips.filter(c => evIds.includes(c.eventId)).map(c => c.id)).filter((x, i, a) => a.indexOf(x) === i);
+    const mid = what.matchId, opp = Lab.isOpp(), all = M.wsFindings();
+    const week = !opp && mid ? M.weekFindings(mid) : [], rest = all.filter(f => !week.includes(f));
+    const has = f => evIds.every(x => (f.eventIds || []).includes(x)) && clIds.every(x => (f.clipIds || []).includes(x));
+    const where = f => opp ? (f.status || '') : M.weekOf(f) ? (M.weekOf(f) === mid ? 'This week' : 'Week: ' + M.matchLabel(M.match(M.weekOf(f)), ws.focus)) : 'Season';
+    const row = f => `<div class="pick-f"><div><b>${U.esc(f.title)}</b><span class="sub">${U.esc(where(f))} · ${pl((f.eventIds || []).length, 'event')} · ${pl((f.clipIds || []).length, 'clip')}</span></div>${has(f) ? '<span class="tag">Linked</span>' : `<button class="btn sm g" data-addto="${f.id}">Add</button>`}</div>`;
+    Lab.openDrawer(`<div class="drawer-h"><div><span class="k">Add to a finding</span><h2>${U.esc(what.label || what.title)}</h2></div><button class="btn sm" data-close>Close</button></div>
+      <div class="drawer-b">
+        <p class="sub">${evIds.length ? `${evIds.length} coded event${evIds.length === 1 ? '' : 's'}` : ''}${evIds.length && clIds.length ? ' and ' : ''}${clIds.length ? `${clIds.length} clip${clIds.length === 1 ? '' : 's'}` : ''} will be linked. Linked events and clips show under the finding in the report.</p>
+        <div class="ctl" style="margin:10px 0 16px"><button class="btn g" id="atNew">+ New finding</button></div>
+        ${!opp && mid ? `<h3>Findings this week (${week.length})</h3>${week.length ? week.map(row).join('') : '<p class="muted">None yet.</p>'}` : ''}
+        ${rest.length ? `<h3 style="margin-top:14px">${!opp && mid ? 'Other findings' : 'Findings'} (${rest.length})</h3>${rest.map(row).join('')}` : ''}
+      </div>`, d => {
+      U.$('#atNew', d).onclick = () => { Lab.closeDrawer(); Lab.newFinding({ title: what.title, stat: what.stat || '', n: what.n || evIds.length || clIds.length, matchIds: mid ? [mid] : [], eventIds: evIds, clipIds: clIds, source: what.source || '', limitations: what.limitations || '' }); };
+      U.$$('[data-addto]', d).forEach(b => b.onclick = () => {
+        const f = M.finding(b.dataset.addto), u = (a, x) => (a || []).concat(x.filter(y => !(a || []).includes(y)));
+        M.updateFinding(f.id, { eventIds: u(f.eventIds, evIds), clipIds: u(f.clipIds, clIds), matchIds: mid ? u(f.matchIds, [mid]) : f.matchIds });
+        Lab.closeDrawer(); U.toast(`Added to “${f.title}”`);
+      });
+    });
+  };
+
+  /* Shortcuts for the + Finding buttons on events and clips. */
+  Lab.eventToFinding = function (id) {
+    const e = M.event(id); if (!e) return; const m = M.match(e.matchId), tpl = M.template(e.templateId) || { name: 'Event' }, ws = M.ws();
+    Lab.addToFinding({ eventIds: [id], matchId: e.matchId, label: Lab.eventLine(e, false), title: `${m.round} Q${e.period} ${e.clock}: ${tpl.name}`, stat: `Coded event: ${Lab.eventLine(e, false)}, ${M.matchLabel(m, ws && ws.focus)}.`, n: 1, source: `Coded event (${tpl.name})`, limitations: 'One passage of play.' });
+  };
+  Lab.clipToFinding = function (id) {
+    const c = M.state.clips.find(x => x.id === id); if (!c) return; const m = M.match(c.matchId), ws = M.ws();
+    Lab.addToFinding({ clipIds: [id], eventIds: c.eventId && M.event(c.eventId) ? [c.eventId] : [], matchId: c.matchId, label: c.title, title: c.title, stat: `Clip ${U.fmtVideoTime(c.start)}–${U.fmtVideoTime(c.end)}, ${M.matchLabel(m, ws && ws.focus)}.`, n: 1, source: 'Video clip', limitations: 'One passage of play.' });
+  };
+
   Lab.openFinding = function (id) {
     const f = M.finding(id); if (!f) return;
     if (Lab.isOpp()) return oppFinding(f);
@@ -212,7 +260,7 @@
         ${ch ? `<div class="rep-chart">${ch}</div>` : ''}
         ${f.interpretation ? `<p><span class="lbl-int">Analyst read</span> ${U.esc(f.interpretation)}</p>` : ''}
         ${f.coaching ? `<p><span class="lbl-act">For coaches</span> ${U.esc(f.coaching)}</p>` : ''}
-        ${clips.length ? `<p class="small"><b>Clips:</b> ${clips.map(c => U.esc(clipLine(c))).join('; ')}</p>` : ''}
+        ${clips.length ? `<p class="small"><b>Clips:</b> ${clips.map(c => U.esc(clipLine(c))).join('; ')}</p>` : ''}${evHTML(f)}
         <p class="small muted">${f.source ? U.esc(f.source) + '. ' : ''}${f.limitations ? 'Limitations: ' + U.esc(f.limitations) : ''}${f.status && f.status !== 'Final' ? ` · Status: ${U.esc(f.status)}` : ''}</p></div>`; }).join('') : '<p class="muted">No findings selected for the brief yet.</p>'}
       ${M.playlists(ws.id).filter(p => p.clipIds.length).map(p => `<h2>Video: ${U.esc(p.name)}</h2><ol class="small">${p.clipIds.map(id => M.state.clips.find(c => c.id === id)).filter(Boolean).map(c => `<li>${U.esc(clipLine(c))}</li>`).join('')}</ol>`).join('')}
       <p class="caveat">${OCAVEAT}</p></article>`;
@@ -231,6 +279,7 @@
       if (f.coaching) L.push(`**For coaches:** ${f.coaching}`);
       const clips = (f.clipIds || []).map(id => M.state.clips.find(c => c.id === id)).filter(Boolean);
       if (clips.length) L.push(`Clips: ${clips.map(clipLine).join('; ')}`);
+      evMD(f, L);
       if (f.limitations) L.push(`_Limitations: ${f.limitations}_`);
       L.push('');
     });
@@ -387,7 +436,7 @@
       ${f.interpretation ? `<p><span class="lbl-int">Analyst interpretation</span> ${U.esc(f.interpretation)}</p>` : ''}
       ${f.question ? `<p><span class="lbl-q">Review question</span> ${U.esc(f.question)}</p>` : ''}
       ${f.followUp ? `<p><span class="lbl-act">Follow-up focus</span> ${U.esc(f.followUp)}${f.followOwner || f.followWhen ? ` <span class="muted">(${U.esc([f.followOwner, f.followWhen].filter(Boolean).join(', '))})</span>` : ''}</p>` : ''}
-      ${clips.length ? `<p class="small"><b>Clips:</b> ${clips.map(c => U.esc(clipLine(c))).join('; ')}</p>` : ''}${(f.eventIds || []).length ? `<p class="small muted">${f.eventIds.length} linked coded event${f.eventIds.length === 1 ? '' : 's'}.</p>` : ''}
+      ${clips.length ? `<p class="small"><b>Clips:</b> ${clips.map(c => U.esc(clipLine(c))).join('; ')}</p>` : ''}${evHTML(f)}
       ${f.limitations ? `<p class="small muted">Limitations: ${U.esc(f.limitations)}</p>` : ''}</div>`;
   }
   function resultBlock(ws, S) {
@@ -437,6 +486,7 @@
       if (f.followUp) L.push(`**Follow-up focus:** ${f.followUp}${f.followOwner || f.followWhen ? ` (${[f.followOwner, f.followWhen].filter(Boolean).join(', ')})` : ''}`);
       const clips = (f.clipIds || []).map(id => M.state.clips.find(c => c.id === id)).filter(Boolean);
       if (clips.length) L.push(`Clips: ${clips.map(clipLine).join('; ')}`);
+      evMD(f, L);
       if (f.limitations) L.push(`_Limitations: ${f.limitations}_`);
       L.push('');
     });

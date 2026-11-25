@@ -317,7 +317,7 @@
         const ct = A.counts(list, byK, ws, (dims.find(x => x.key === byK) || {}).order), lab = (dims.find(x => x.key === byK) || {}).label;
         Lab.newFinding({ title: `${tpl.name}: ${String(lab).toLowerCase()}`, stat: `${tpl.name}, ${sideK === 'both' ? 'both teams' : sideK === 'us' ? team : opp}, ${m.round} ${m.season}. ${lab}: ${ct.rows.map(x => `${x.label} ${x.n}/${ct.coded}`).join(', ')}${ct.uncoded ? ` (${ct.uncoded} not coded)` : ''}.`, n: list.length, matchIds: [m.id], source: `Coded events (${tpl.name})`, eventIds: list.slice(0, 80).map(e => e.id), limitations: lim(['Hand-coded events from one match.', list.length < U.SMALL_N ? `Small sample (n=${list.length}).` : '', 'Shows what the coder recorded; check whether the whole match was coded.']) });
       };
-      U.$$('[data-cfd]', el).forEach(b => b.onclick = () => { const c = M.state.clips.find(x => x.id === b.dataset.cfd); Lab.newFinding({ title: c.title, stat: `Clip ${U.fmtVideoTime(c.start)}–${U.fmtVideoTime(c.end)}, ${M.matchLabel(m, team)}.`, n: 1, matchIds: [m.id], clipIds: [c.id], eventIds: c.eventId ? [c.eventId] : [], source: 'Video clip', limitations: 'One passage of play.' }); });
+      U.$$('[data-cfd]', el).forEach(b => b.onclick = () => Lab.clipToFinding(b.dataset.cfd));
       U.$$('.tl-match [data-open]', el).forEach(n => n.onclick = () => Lab.openEvent(n.dataset.open));
       const nf = U.$('#rvNewF', el); if (nf) nf.onclick = () => Lab.newFinding({ title: 'New finding', matchIds: [m.id], source: 'Analyst observation' });
       Lab.wireFindingCards(el);
