@@ -20,7 +20,7 @@ Open `index.html` in a browser. It runs from the file system or any static host.
 
 ## Built-in data
 - **AFL 2026:** results with quarter scores, per-game player stats (team match totals are summed from them), team season stats, ratings, lists, Footy Lab WAR.
-- **VFL 2026:** results with quarter scores, team season stats, player season averages, lists, ladder, Footy Lab WAR. No per-game team or player stats: import them for match-level review.
+- **VFL 2026:** results with quarter scores, team season stats, player season averages, lists, ladder, Footy Lab WAR, and per-game team and player stats from AFLM Stats (goals, behinds, disposals, kicks, handballs, marks, hitouts, tackles, plus fantasy points for players). Built by tools/add_vfl_match_stats.py.
 
 ## Structure
 ```

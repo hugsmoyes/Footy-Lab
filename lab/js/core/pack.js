@@ -26,7 +26,7 @@
     X.warOf = WAR.of;
   }
   /* ---------- season object, same shape as an imported one ---------- */
-  X.SOURCE = P.gameCols && P.gameCols.length ? `${P.competition} ${P.season} season: match results, team and player match statistics, club lists and team ratings` : `${P.competition} ${P.season} season: match results, team season stats, player season averages and club lists`;
+  X.SOURCE = P.gameCols && P.gameCols.length ? `${P.competition} ${P.season} season: match results, team and player match statistics, club lists${P.ratingsCsv ? ' and team ratings' : ''}` : `${P.competition} ${P.season} season: match results, team season stats, player season averages and club lists`;
   X.hasGames = !!(P.gameCols && P.gameCols.length);
   const opts = { competition: P.competition, season: P.season, source: X.SOURCE };
   const team = S.readTeamSeason(P.teamStatsCsv, Object.assign({ file: 'built-in' }, opts));
@@ -81,8 +81,11 @@
         if (r[1 + GI.DisposalEfficiency] != null && r[1 + GI.Disposals]) o.effDisp += r[1 + GI.DisposalEfficiency] * r[1 + GI.Disposals] / 100;
       });
     });
-    Object.values(totals).forEach(o => { o.DisposalEfficiency = o.Disposals ? o.effDisp / o.Disposals * 100 : null; });
+    Object.values(totals).forEach(o => { o.DisposalEfficiency = GI.DisposalEfficiency != null && o.Disposals ? o.effDisp / o.Disposals * 100 : null; });
+    /* Team rows supplied directly (VFL) replace the player sums: they include rushed behinds. */
+    if (P.teamGames) Object.entries(P.teamGames).forEach(([k, row]) => { const o = totals[k] = totals[k] || { n: 0 }; P.teamGameCols.forEach((c, i) => { o[c] = row[i]; }); });
   }
+  X.teamDirect = !!P.teamGames;
   X.total = function (matchIndex, t) { if (!totals) buildTotals(); return totals[matchIndex + '|' + t] || null; };
 
   /* Stats shown in trends: [key, label, better]. Points come from the result, not the players. */
@@ -93,8 +96,9 @@
     ['TotalClearances', 'Clearances', 'high'], ['Inside50s', 'Inside 50s (summed from players)', 'high'], ['MetresGained', 'Metres gained', 'high'],
     ['Marks', 'Marks', ''], ['ContestedMarks', 'Contested marks', 'high'], ['Intercepts', 'Intercept possessions', 'high'], ['InterceptMarks', 'Intercept marks', 'high'],
     ['Tackles', 'Tackles', 'high'], ['PressureActs', 'Pressure acts', 'high'], ['Turnovers', 'Turnovers', 'low'], ['GroundBallGets', 'Ground ball gets', 'high'],
-    ['Hitouts', 'Hitouts', 'high'], ['HitoutsToAdvantage', 'Hitouts to advantage', 'high'], ['ScoreLaunches', 'Score launches', 'high'], ['KickIns', 'Kick-ins', '']
-  ];
+    ['Hitouts', 'Hitouts', 'high'], ['HitoutsToAdvantage', 'Hitouts to advantage', 'high'], ['ScoreLaunches', 'Score launches', 'high'], ['KickIns', 'Kick-ins', ''],
+    ['Kicks', 'Kicks', ''], ['Handballs', 'Handballs', ''], ['Behinds', 'Behinds', '']
+  ].filter(([k]) => k === 'Points' || GC.includes(k) || (P.teamGameCols || []).includes(k)).filter(([k]) => P.teamGames || !['Kicks', 'Handballs', 'Behinds'].includes(k));
   X.gameValue = function (g, t, k) {
     if (k === 'Points') return t === 'for' ? g.us : g.them;
     if (!X.hasGames) {

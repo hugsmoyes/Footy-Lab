@@ -108,7 +108,7 @@
 
       const h2hTeam = vs.tmH2h && X.teams.includes(vs.tmH2h) ? vs.tmH2h : us && us !== team ? us : '';
       const H = h2hTeam ? G.filter(g => g.opp === h2hTeam) : [];
-      const HK = X.hasGames ? ['Disposals', 'ContestedPossessions', 'TotalClearances', 'Inside50s', 'Tackles', 'Marks'] : X.TREND.map(x => x[0]).filter(k => k !== 'Points');
+      const HK = X.hasGames ? (X.teamDirect ? ['Disposals', 'Kicks', 'Marks', 'Tackles', 'Hitouts', 'Goals'] : ['Disposals', 'ContestedPossessions', 'TotalClearances', 'Inside50s', 'Tackles', 'Marks']) : X.TREND.map(x => x[0]).filter(k => k !== 'Points');
       const ratingRow = (n, r) => `<tr class="${n === team ? 'hl' : n === cmp ? 'hl2' : ''}"><td class="mono">${r.CurrentRank || ''}</td><td class="l">${U.esc(n)}</td><td>${r.CurrentRating != null ? U.signed(r.CurrentRating.toFixed(1)) : '–'}</td><td>${r.CurrentAttack != null ? U.signed(r.CurrentAttack.toFixed(1)) : '–'} <span class="muted">${r.CurrentAttackRank || ''}</span></td><td>${r.CurrentDefence != null ? U.signed(r.CurrentDefence.toFixed(1)) : '–'} <span class="muted">${r.CurrentDefenceRank || ''}</span></td><td>${r.SeasonRating != null ? U.signed(r.SeasonRating.toFixed(1)) : '–'}</td><td>${r.SeasonRank || ''}</td></tr>`;
 
       el.innerHTML = `

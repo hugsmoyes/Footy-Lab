@@ -61,7 +61,8 @@
   ];
   const PACK_DEF = ['Disposals', 'ContestedPossessions', 'TotalClearances', 'Inside50s', 'ShotsAtGoal', 'MetresGained', 'Tackles', 'PressureActs', 'Turnovers', 'Intercepts'];
   const IMP_DEF = ['m-disposals', 'm-cp', 'm-clearances', 'm-i50', 'm-shots', 'm-mgained', 'm-tackles', 'm-pressure', 'm-turnovers', 'm-intercepts', 'm-marks', 'm-cm'];
-  MD.DEFAULT_KEYS = PACK_DEF.map(k => 'pack:' + k).concat(IMP_DEF.map(k => 'met:' + k));
+  /* VFL team match stats are a short list, so the default key stats add the ones it has. */
+  Object.defineProperty(MD, 'DEFAULT_KEYS', { get() { const P = X(); return PACK_DEF.concat(P && P.teamDirect ? ['Goals', 'Kicks', 'Handballs', 'Marks', 'Hitouts'] : []).map(k => 'pack:' + k).concat(IMP_DEF.map(k => 'met:' + k)); } });
 
   MD.fmt = function (unit, v, opts) {
     if (v == null || isNaN(v)) return '–';
@@ -100,7 +101,7 @@
       const us = tu && tu[k] != null ? tu[k] : null, them = to && to[k] != null ? to[k] : null;
       if (us == null && them == null) return;
       const bf = mean(G.map(g => P.gameValue(g, 'for', k))), ba = mean(G.map(g => P.gameValue(g, 'against', k)));
-      rows.push({ id: 'pack:' + k, key: k, label, group: grp, unit: unit || 'count', src: 'pack', srcLabel: `${P.raw.competition} ${P.raw.season} player stats, summed by team`, us, them,
+      rows.push({ id: 'pack:' + k, key: k, label, group: grp, unit: unit || 'count', src: 'pack', srcLabel: P.teamDirect && (P.raw.teamGameCols || []).includes(k) ? `${P.raw.competition} ${P.raw.season} team match stats` : `${P.raw.competition} ${P.raw.season} player stats, summed by team`, us, them,
         base: bf.n ? { f: bf.v, a: ba.v, n: bf.n, label: `our other ${P.raw.season} games (${bf.n})`, note: `Average of our other ${P.raw.season} games in the built-in data, this match excluded.` } : null });
     }));
     return rows;
@@ -115,15 +116,15 @@
 
   /* ---------- player match stats ---------- */
   const PACK_PLAYER_SETS = [
-    ['Overview', ['TimeOnGround', 'Disposals', 'ContestedPossessions', 'TotalClearances', 'Inside50s', 'Marks', 'Tackles', 'Goals', 'ScoreInvolvements', 'RatingPoints']],
+    ['Overview', ['TimeOnGround', 'Disposals', 'ContestedPossessions', 'TotalClearances', 'Inside50s', 'Kicks', 'Handballs', 'Marks', 'Tackles', 'Hitouts', 'Goals', 'Behinds', 'ScoreInvolvements', 'RatingPoints', 'DreamTeamPoints']],
     ['Ball use', ['Disposals', 'Kicks', 'Handballs', 'DisposalEfficiency', 'MetresGained', 'HandballReceives', 'Turnovers']],
     ['Contested', ['ContestedPossessions', 'GroundBallGets', 'TotalClearances', 'FirstPossessions', 'CentreBounceAttendancePercentage', 'ContestedMarks']],
     ['Attacking', ['Goals', 'Behinds', 'ShotsAtGoal', 'xScore', 'GoalAssists', 'Inside50s', 'ScoreInvolvements', 'ScoreLaunches']],
     ['Defensive', ['Intercepts', 'InterceptMarks', 'Tackles', 'PressureActs', 'KickIns']],
     ['Ruck', ['RuckContests', 'Hitouts', 'HitoutsToAdvantage', 'ContestedPossessions', 'TotalClearances']]
   ];
-  const PNAME = { TimeOnGround: ['Time on ground %', 'TOG', '%'], CentreBounceAttendancePercentage: ['Centre bounce attendance %', 'CBA', '%'], Disposals: ['Disposals', 'Disp'], Kicks: ['Kicks', 'K'], Handballs: ['Handballs', 'HB'], DisposalEfficiency: ['Disposal efficiency %', 'DE', '%'], ContestedPossessions: ['Contested possessions', 'CP'], GroundBallGets: ['Ground ball gets', 'GBG'], TotalClearances: ['Clearances', 'Clr'], FirstPossessions: ['First possessions', 'FP'], Inside50s: ['Inside 50s', 'I50'], MetresGained: ['Metres gained', 'MG', 'm'], Marks: ['Marks', 'Mk'], ContestedMarks: ['Contested marks', 'CM'], InterceptMarks: ['Intercept marks', 'IM'], Intercepts: ['Intercept possessions', 'Int'], Tackles: ['Tackles', 'Tk'], PressureActs: ['Pressure acts', 'PA'], Turnovers: ['Turnovers', 'TO'], KickIns: ['Kick-ins', 'KI'], HandballReceives: ['Handball receives', 'HBR'], RuckContests: ['Ruck contests', 'RC'], Hitouts: ['Hitouts', 'HO'], HitoutsToAdvantage: ['Hitouts to advantage', 'HOA'], ShotsAtGoal: ['Shots at goal', 'Shots'], Goals: ['Goals', 'G'], Behinds: ['Behinds', 'B'], xScore: ['Expected score', 'xS'], GoalAssists: ['Goal assists', 'GA'], ScoreInvolvements: ['Score involvements', 'SI'], ScoreLaunches: ['Score launches', 'SL'], RatingPoints: ['Rating points', 'Rtg'] };
-  const seasonKeyFor = k => k === 'Goals' ? 'Goals_Avg' : k === 'RatingPoints' ? 'RatingPoints_Avg' : k;
+  const PNAME = { TimeOnGround: ['Time on ground %', 'TOG', '%'], CentreBounceAttendancePercentage: ['Centre bounce attendance %', 'CBA', '%'], Disposals: ['Disposals', 'Disp'], Kicks: ['Kicks', 'K'], Handballs: ['Handballs', 'HB'], DisposalEfficiency: ['Disposal efficiency %', 'DE', '%'], ContestedPossessions: ['Contested possessions', 'CP'], GroundBallGets: ['Ground ball gets', 'GBG'], TotalClearances: ['Clearances', 'Clr'], FirstPossessions: ['First possessions', 'FP'], Inside50s: ['Inside 50s', 'I50'], MetresGained: ['Metres gained', 'MG', 'm'], Marks: ['Marks', 'Mk'], ContestedMarks: ['Contested marks', 'CM'], InterceptMarks: ['Intercept marks', 'IM'], Intercepts: ['Intercept possessions', 'Int'], Tackles: ['Tackles', 'Tk'], PressureActs: ['Pressure acts', 'PA'], Turnovers: ['Turnovers', 'TO'], KickIns: ['Kick-ins', 'KI'], HandballReceives: ['Handball receives', 'HBR'], RuckContests: ['Ruck contests', 'RC'], Hitouts: ['Hitouts', 'HO'], HitoutsToAdvantage: ['Hitouts to advantage', 'HOA'], ShotsAtGoal: ['Shots at goal', 'Shots'], Goals: ['Goals', 'G'], Behinds: ['Behinds', 'B'], xScore: ['Expected score', 'xS'], GoalAssists: ['Goal assists', 'GA'], ScoreInvolvements: ['Score involvements', 'SI'], ScoreLaunches: ['Score launches', 'SL'], RatingPoints: ['Rating points', 'Rtg'], DreamTeamPoints: ['Fantasy points', 'AF'] };
+  const seasonKeyFor = k => k === 'Goals' ? 'Goals_Avg' : k === 'RatingPoints' ? 'RatingPoints_Avg' : k === 'DreamTeamPoints' ? 'DreamTeamPoints_Avg' : k;
 
   /* {src, srcLabel, sets:[[name,[col]]], cols:{k:{label,head,unit}}, rows:[{id, key, name, number, v:{}, season:{}}]} or null */
   MD.players = function (m, team) {
@@ -133,7 +134,7 @@
       const rows = P.roster(t).map(p => { const g = P.games(p).find(x => x.tg && x.tg.m.i === pm.i); return g ? { id: p.key, key: p.key, name: p.name, number: p.number, v: g.v, s: p.s || {}, games: p.games } : null; }).filter(Boolean);
       if (rows.length) {
         const cols = {}; Object.keys(PNAME).forEach(k => { cols[k] = { label: PNAME[k][0], head: PNAME[k][1], unit: PNAME[k][2] || 'count', seasonKey: P.PSTAT[seasonKeyFor(k)] ? seasonKeyFor(k) : null }; });
-        return { src: 'pack', srcLabel: `${P.raw.competition} ${P.raw.season} per-game player stats (built in)`, sets: PACK_PLAYER_SETS.map(([n, ks]) => [n, ks.filter(k => P.gameCols.includes(k))]), cols, rows };
+        return { src: 'pack', srcLabel: `${P.raw.competition} ${P.raw.season} per-game player stats (built in)`, sets: PACK_PLAYER_SETS.map(([n, ks]) => [n, ks.filter(k => P.gameCols.includes(k))]).filter(([n, ks]) => ks.length > 1 && (n === 'Overview' || P.gameCols.length > 12)), cols, rows };
       }
     }
     const ps = M.state.playerStats, pre = m.id + '|';
@@ -182,7 +183,7 @@
     const tsActs = [['import:teamstats', 'Import team stats'], ['tpl:team', 'Pre-filled template'], ['manual', 'Enter stats by hand']];
     if (pr.length || ir.length) {
       const bits = [];
-      if (pr.length) bits.push(`${pr.length} stats for both teams, full game, summed from player stat lines (${packName}). No quarter splits.`);
+      if (pr.length) bits.push(`${pr.length} stats for both teams, full game, ${P.teamDirect ? 'from team match stats' : 'summed from player stat lines'} (${packName}). No quarter splits.`);
       if (ir.length) bits.push(`${ir.length} imported stat${ir.length === 1 ? '' : 's'} for ${impTeams.length === 2 ? 'both teams' : impTeams[0] || 'one team'}${per.length ? `, with ${per.join(', ')} splits` : ', full game'}.`);
       out.push({ id: 'teamstats', label: 'Team match statistics', state: impTeams.length === 1 && !pr.length ? 'part' : 'ok', text: bits.join(' '), src: [pr.length && `${packName} built-in`, ir.length && 'Imported'].filter(Boolean).join(' + '), acts: pr.length ? [] : tsActs.slice(0, 1) });
     } else out.push({ id: 'teamstats', label: 'Team match statistics', state: 'none', text: P && !P.hasGames && pm ? `The ${packName} built-in data has team season averages only, not per-game team stats.` : 'No team stats for this match.', acts: tsActs });
