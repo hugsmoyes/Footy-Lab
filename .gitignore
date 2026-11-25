@@ -1,0 +1,2 @@
+# Raw data files stay off GitHub (the site only needs the built .js files)
+*.csv

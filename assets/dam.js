@@ -22,6 +22,7 @@
   var key = /players/.test(file) ? 'players'
     : /^about/.test(file) ? 'about'
     : /^club-lab/.test(file) ? 'lab'
+    : /^404/.test(file) ? 'none'
     : /^(article-|centre-ball-ups)/.test(file) ? 'deep-dives'
     : /^index|^$/.test(file) ? null : 'tools';
   if (key) {

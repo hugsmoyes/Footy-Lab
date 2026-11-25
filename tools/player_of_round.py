@@ -1,7 +1,7 @@
 """Build the homepage 'Player of the round' data from a match stats CSV.
 
 Usage:
-  python3 tools/player_of_round.py assets/data/round-29-2026-fremantle-v-brisbane.csv \
+  python3 tools/player_of_round.py path/to/round-match-stats.csv \
       --label "Grand Final 2026" --result "Brisbane 14.12 (96) d Fremantle 12.17 (89)" --where "MCG, 26 September 2026"
 
 Writes assets/data/player-of-the-round.js. The player of the round is the player with the most rating points
