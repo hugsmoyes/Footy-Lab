@@ -10,6 +10,7 @@
 
   /* ---------- built-in results ---------- */
   const X = () => (Lab.Pack && Lab.Pack.ok ? Lab.Pack : null);
+  const who = () => (Lab.isOpp && Lab.isOpp() ? 'their' : 'our');
   MD.packMatch = function (m) {
     const P = X(); if (!P || !m || String(m.season) !== P.raw.season) return null;
     if (m.packId) { const hit = P.matches.find(x => x.id === m.packId); if (hit) return hit; }
@@ -83,7 +84,7 @@
       const unit = mt.kind === 'ratio' ? 'ratio' : mt.unit;
       const bf = A.aggregate(mt, others.map(x => M.teamValue(x.id, team, period, mt.id)));
       const ba = A.aggregate(mt, others.map(x => M.teamValue(x.id, M.opponentIn(x, team), period, mt.id)));
-      let base = bf.n ? { f: bf.value, a: ba.n ? ba.value : null, n: bf.n, label: `our other imported matches (${bf.n})`, note: 'Average of our other matches with this stat imported.' } : null;
+      let base = bf.n ? { f: bf.value, a: ba.n ? ba.value : null, n: bf.n, label: `${who()} other imported matches (${bf.n})`, note: `Average of ${who()} other matches with this stat imported.` } : null;
       if (!base && period === 'Full' && sea && sea.teams && sea.teams[team] && mt.kind !== 'ratio') {
         const S = Lab.Season, f = S.value(sea, team, 'for', mt.id), a = S.value(sea, team, 'against', mt.id);
         if (f != null) base = { f, a, n: sea.teams[team].games, label: `season average (${sea.teams[team].games} games)`, note: `${sea.competition} ${sea.season} team season stats. Includes this match, so it isn't an independent comparison.`, season: true };
@@ -102,7 +103,7 @@
       if (us == null && them == null) return;
       const bf = mean(G.map(g => P.gameValue(g, 'for', k))), ba = mean(G.map(g => P.gameValue(g, 'against', k)));
       rows.push({ id: 'pack:' + k, key: k, label, group: grp, unit: unit || 'count', src: 'pack', srcLabel: P.teamDirect && (P.raw.teamGameCols || []).includes(k) ? `${P.raw.competition} ${P.raw.season} team match stats` : `${P.raw.competition} ${P.raw.season} player stats, summed by team`, us, them,
-        base: bf.n ? { f: bf.v, a: ba.v, n: bf.n, label: `our other ${P.raw.season} games (${bf.n})`, note: `Average of our other ${P.raw.season} games in the built-in data, this match excluded.` } : null });
+        base: bf.n ? { f: bf.v, a: ba.v, n: bf.n, label: `${who()} other ${P.raw.season} games (${bf.n})`, note: `Average of ${who()} other ${P.raw.season} games in the built-in data, this match excluded.` } : null });
     }));
     return rows;
   }
@@ -188,7 +189,7 @@
       out.push({ id: 'teamstats', label: 'Team match statistics', state: impTeams.length === 1 && !pr.length ? 'part' : 'ok', text: bits.join(' '), src: [pr.length && `${packName} built-in`, ir.length && 'Imported'].filter(Boolean).join(' + '), acts: pr.length ? [] : tsActs.slice(0, 1) });
     } else out.push({ id: 'teamstats', label: 'Team match statistics', state: 'none', text: P && !P.hasGames && pm ? `The ${packName} built-in data has team season averages only, not per-game team stats.` : 'No team stats for this match.', acts: tsActs });
     const pu = MD.players(m, team), po = MD.players(m, opp);
-    if (pu) out.push({ id: 'playerstats', label: 'Player match statistics', state: 'ok', text: `${pu.rows.length} of our players${po ? `, ${po.rows.length} of theirs` : ''}.`, src: pu.srcLabel });
+    if (pu) out.push({ id: 'playerstats', label: 'Player match statistics', state: 'ok', text: Lab.isOpp() ? `${pu.rows.length} ${team} players${po ? `, ${po.rows.length} ${opp}` : ''}.` : `${pu.rows.length} of our players${po ? `, ${po.rows.length} of theirs` : ''}.`, src: pu.srcLabel });
     else out.push({ id: 'playerstats', label: 'Player match statistics', state: 'none', text: P && !P.hasGames ? `The ${packName} built-in data has player season averages only, not per-game stats. Season averages are shown as context and never as this match.` : 'No player stats for this match.', acts: [['import:playerstats', 'Import player stats'], ['tpl:player', 'Pre-filled template']] });
     const lu = MD.lineup(m, team);
     out.push(lu ? { id: 'lineups', label: 'Line-ups', state: lu.derived ? 'part' : 'ok', text: `${lu.n} players for ${team}.`, src: lu.src, acts: lu.derived ? [['lineups', 'Tick the team sheet']] : [] }
@@ -238,7 +239,7 @@
     }
     if (spec.kind === 'mTeamStat') {
       const row = MD.teamRow(m, team, spec.id, spec.period); if (!row) return '';
-      const cats = ['This match'].concat(row.base ? [row.base.season ? 'Season average' : 'Our other games (avg)'] : []);
+      const cats = ['This match'].concat(row.base ? [row.base.season ? 'Season average' : (who() === 'their' ? 'Their' : 'Our') + ' other games (avg)'] : []);
       const f = v => MD.fmt(row.unit, v);
       return Ch.grouped(cats, [{ name: team, color: Ch.COL.opp, values: [row.us].concat(row.base ? [row.base.f] : []), tips: [f(row.us)].concat(row.base ? [f(row.base.f)] : []) }, { name: row.base ? `${opp} / opponents` : opp, color: Ch.COL.their, values: [row.them].concat(row.base ? [row.base.a] : []), tips: [f(row.them)].concat(row.base ? [f(row.base.a)] : []) }], { fmt: v => MD.fmt(row.unit, v, { noUnit: true }), aria: row.label })
         + `<p class="sub">${U.esc(row.label)}${spec.period && spec.period !== 'Full' ? ' (' + spec.period + ')' : ''}: ${U.esc(team)} ${f(row.us)}, ${U.esc(opp)} ${f(row.them)}${row.base ? `; ${U.esc(row.base.label)}: ${f(row.base.f)} for, ${f(row.base.a)} against` : ''}. Source: ${U.esc(row.srcLabel)}.</p>`;

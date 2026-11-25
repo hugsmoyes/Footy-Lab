@@ -113,7 +113,7 @@
     const opp = M.opponentIn(m, team);
     if (!rows.length) return '';
     const anyBase = rows.some(r => r.base);
-    return `<div class="tw"><table class="compact"><thead><tr><th class="l">Stat</th><th>${U.esc(team)}</th><th>${U.esc(opp)}</th><th>Diff</th>${anyBase ? '<th data-tip="Our average for comparison. Hover a value for what it covers.">Our usual</th><th data-tip="This match minus our usual">v usual</th>' : ''}<th class="l">Source</th><th></th></tr></thead><tbody>
+    return `<div class="tw"><table class="compact"><thead><tr><th class="l">Stat</th><th>${U.esc(team)}</th><th>${U.esc(opp)}</th><th>Diff</th>${anyBase ? `<th data-tip="${Lab.isOpp() ? 'Their' : 'Our'} average for comparison. Hover a value for what it covers.">${Lab.isOpp() ? 'Their usual' : 'Our usual'}</th><th data-tip="This match minus ${Lab.isOpp() ? 'their' : 'our'} usual">v usual</th>` : ''}<th class="l">Source</th><th></th></tr></thead><tbody>
       ${rows.map(r => { const f = v => MD().fmt(r.unit, v); const d = r.us != null && r.them != null ? r.us - r.them : null, dv = r.base && r.us != null && r.base.f != null ? r.us - r.base.f : null;
         return `<tr class="${chartSel === r.id ? 'hl' : ''}"><td class="l">${chartSel !== undefined ? `<button class="link" data-chart="${U.esc(r.id)}">${U.esc(r.label)}</button>` : U.esc(r.label)}</td><td><b>${f(r.us)}</b></td><td>${f(r.them)}</td><td>${r.unit === 'ratio' ? (d == null ? '–' : U.signed(U.round(d * 100, 1)) + ' pts') : sg(d, r.unit)}</td>
           ${anyBase ? `<td class="muted" ${r.base ? `data-tip="${U.esc(`<b>${r.base.label}</b><br>${r.base.note}`)}"` : ''}>${r.base ? f(r.base.f) + (r.base.season ? '<sup class="flag">season</sup>' : '') : '–'}</td><td>${r.unit === 'ratio' ? (dv == null ? '–' : U.signed(U.round(dv * 100, 1)) + ' pts') : sg(dv, r.unit)}</td>` : ''}
@@ -143,7 +143,7 @@
         <div class="next"><span class="k">Next</span><b>${U.esc(next[0])}</b><span>${U.esc(next[1])}</span><button class="btn sm g" data-sec="${next[2]}">Go</button></div>
       </div>
     </section>
-    <section class="sec card"><div class="card-h"><div><h2>Key team stats</h2><p>${key.length ? `${key.length} of ${all.length} stats this match has. "Our usual" is our average in other games, so this game can be compared with our own baseline.` : all.length ? 'None of your key stats are recorded for this match.' : 'No team match stats for this match.'}</p></div>
+    <section class="sec card"><div class="card-h"><div><h2>Key team stats</h2><p>${key.length ? `${key.length} of ${all.length} stats this match has. "${Lab.isOpp() ? 'Their usual' : 'Our usual'}" is ${Lab.isOpp() ? 'their' : 'our'} average in other games, so this game can be compared with our own baseline.` : all.length ? 'None of your key stats are recorded for this match.' : 'No team match stats for this match.'}</p></div>
       <div class="ctl">${all.length ? '<button class="btn sm" id="rvKeys">Choose key stats</button><button class="btn sm" data-sec="team">All team stats</button>' : ''}</div></div>
       ${key.length ? statTable(m, team, key, 'Full') : all.length ? '<p class="muted">Choose key stats to show here.</p>' : `<div class="empty"><h3>No team match stats yet</h3><p>${U.esc(MD().coverage(m, team, rv).find(c => c.id === 'teamstats').text)}</p><div class="ctl"><button class="btn g" data-act="import:teamstats">Import team stats</button><button class="btn" data-act="tpl:team">Pre-filled template</button><button class="btn" data-act="manual">Enter stats by hand</button></div></div>`}
     </section>`;
@@ -156,7 +156,7 @@
     const rows = rowsAll.filter(r => !grp || r.group === grp);
     const sel = rows.some(r => r.id === vs.rvStat) ? vs.rvStat : (rows[0] || {}).id;
     const r = MD().result(m, team, rv);
-    return `<section class="card"><div class="card-h"><div><h2>Team match stats</h2><p>${U.esc(team)} and ${U.esc(M.opponentIn(m, team))} in this match, with our usual numbers for comparison. Click a stat to chart it.</p></div></div>
+    return `<section class="card"><div class="card-h"><div><h2>Team match stats</h2><p>${U.esc(team)} and ${U.esc(M.opponentIn(m, team))} in this match, with ${Lab.isOpp() ? 'their' : 'our'} usual numbers for comparison. Click a stat to chart it.</p></div></div>
       ${rowsAll.length || period !== 'Full' ? `<div class="f-row" style="margin-bottom:10px">
         <div class="f"><label>Quarter</label><span class="seg">${['Full', 'Q1', 'Q2', 'Q3', 'Q4'].map(p => `<button class="${p === period ? 'on' : ''}" data-per="${p}" ${pers.includes(p) ? '' : 'disabled data-tip="No imported stats for this quarter"'}>${p === 'Full' ? 'Full game' : p}</button>`).join('')}</span></div>
         <div class="f"><label for="rvG">Stat group</label><select id="rvG"><option value="">All (${rowsAll.length})</option>${groups.map(g => `<option ${g === grp ? 'selected' : ''}>${U.esc(g)}</option>`).join('')}</select></div></div>
@@ -258,7 +258,7 @@
   Lab.Views.review = {
     render(el, { ws }) {
       const team = ws.focus, ms = M.sortMatches(M.state.matches.filter(m => M.involves(m, team)));
-      if (!ms.length) { el.innerHTML = `<div class="empty"><h3>No matches to review yet</h3><p>Add a completed ${U.esc(team)} game first. Match review is for games that have been played; to prepare for an upcoming opponent, use Opponent Lab.</p><div class="ctl"><button class="btn g" id="rvAdd">+ Add a match</button></div></div>`; U.$('#rvAdd', el).onclick = () => Lab.openPackPicker(); return; }
+      if (!ms.length) { el.innerHTML = `<div class="empty"><h3>No matches to review yet</h3><p>${Lab.isOpp() ? `Add ${U.esc(team)} games from the season results first, then pick one to analyse.` : `Add a completed ${U.esc(team)} game first. Match review is for games that have been played; to prepare for an upcoming opponent, use Opponent mode.`}</p><div class="ctl"><button class="btn g" id="rvAdd">+ Add a match</button></div></div>`; U.$('#rvAdd', el).onclick = () => Lab.openPackPicker(); return; }
       const played = ms.filter(m => MD().result(m, team, M.reviewFor(m.id)));
       if (!vs.rvMatch || !ms.some(m => m.id === vs.rvMatch)) { const withRv = ms.filter(m => M.reviewFor(m.id)); vs.rvMatch = (withRv[withRv.length - 1] || played[played.length - 1] || ms[ms.length - 1]).id; }
       const m = M.match(vs.rvMatch), rv = M.reviewFor(m.id), opp = M.opponentIn(m, team), r = MD().result(m, team, rv);
@@ -269,25 +269,25 @@
       const headline = `${U.esc(team)} ${r ? `${r.us} ${r.res === 'Win' ? 'd' : r.res === 'Loss' ? 'lost to' : 'drew with'} ${U.esc(opp)} ${r.them}` : `v ${U.esc(opp)}`}`;
       let body;
       if (!rv) {
-        body = `<section class="card"><div class="card-h"><div><span class="k">Post-match review · completed match</span><h2>${headline}</h2><p>${U.esc([m.round, m.season, m.date, m.venue].filter(Boolean).join(' · '))}</p></div></div>
-          ${future ? `<p class="warnline">This match is dated ${U.esc(m.date)} and has no score, so it looks like it hasn't been played. Match review is for completed games. To prepare for an upcoming opponent, use Opponent Lab.</p>` : ''}
+        body = `<section class="card"><div class="card-h"><div><span class="k">${Lab.isOpp() ? 'Opposition match analysis · completed match' : 'Post-match review · completed match'}</span><h2>${headline}</h2><p>${U.esc([m.round, m.season, m.date, m.venue].filter(Boolean).join(' · '))}</p></div></div>
+          ${future ? `<p class="warnline">This match is dated ${U.esc(m.date)} and has no score, so it looks like it hasn't been played. ${Lab.isOpp() ? 'Only completed games can be analysed.' : 'Match review is for completed games. To prepare for an upcoming opponent, use Opponent mode.'}</p>` : ''}
           <div class="form" style="max-width:720px;margin-top:8px"><label class="full">Review focus (optional, comma separated)<input id="rvF0" placeholder="e.g. Stoppages, Forward entries, Defensive transition"></label></div>
-          <div class="ctl" style="margin-top:10px"><button class="btn g" id="rvStart" ${future ? 'disabled' : ''}>Start review</button>${!r ? '<button class="btn" data-act="editMatch">Enter the score</button>' : ''}</div></section>
+          <div class="ctl" style="margin-top:10px"><button class="btn g" id="rvStart" ${future ? 'disabled' : ''}>${Lab.isOpp() ? 'Analyse this game' : 'Start review'}</button>${!r ? '<button class="btn" data-act="editMatch">Enter the score</button>' : ''}</div></section>
           <div class="sec">${sec.coverage(m, team, null)}</div>`;
       } else {
-        body = `<div class="rv-nav" role="tablist" aria-label="Review sections">${SECS.map(([id, l]) => `<button role="tab" aria-selected="${id === cur}" data-sec="${id}" class="${id === cur ? 'on' : ''}"><i class="dot dot-${secState(id, m, team, rv)}"></i>${l}</button>`).join('')}<button class="rv-rep" id="rvRep2">Report →</button></div>
+        body = `<div class="rv-nav" role="tablist" aria-label="Review sections">${SECS.map(([id, l]) => `<button role="tab" aria-selected="${id === cur}" data-sec="${id}" class="${id === cur ? 'on' : ''}"><i class="dot dot-${secState(id, m, team, rv)}"></i>${l}</button>`).join('')}<button class="rv-rep" id="rvRep2">${Lab.isOpp() ? 'Brief →' : 'Report →'}</button></div>
           <div class="sec">${sec[cur](m, team, rv)}</div>`;
       }
-      el.innerHTML = `<section class="card rv-head"><div class="card-h" style="margin:0"><div><span class="k">Match review</span><h2>${headline}</h2><p>${U.esc([m.round, m.season, m.date, m.venue].filter(Boolean).join(' · '))}${rv ? ` · review started ${U.esc(rv.createdAt.slice(0, 10))}` : ''}</p></div>
-        <div class="ctl">${picker}${rv ? `<button class="btn sm danger" id="rvDel">Delete review</button>` : ''}</div></div></section>
+      el.innerHTML = `<section class="card rv-head"><div class="card-h" style="margin:0"><div><span class="k">${Lab.isOpp() ? `Match analysis · ${U.esc(team)}` : 'Match review'}</span><h2>${headline}</h2><p>${U.esc([m.round, m.season, m.date, m.venue].filter(Boolean).join(' · '))}${rv ? ` · ${Lab.isOpp() ? 'analysis' : 'review'} started ${U.esc(rv.createdAt.slice(0, 10))}` : ''}</p></div>
+        <div class="ctl">${picker}${rv ? `<button class="btn sm danger" id="rvDel">${Lab.isOpp() ? 'Delete analysis' : 'Delete review'}</button>` : ''}</div></div></section>
         <div class="sec">${body}</div>`;
 
       // wiring
       U.$('#rvM', el).onchange = e => { vs.rvMatch = e.target.value; vs.rvSec = M.reviewFor(e.target.value) ? 'overview' : 'coverage'; Lab.render(); };
       U.$$('[data-sec]', el).forEach(b => b.onclick = () => { vs.rvSec = b.dataset.sec; Lab.render(); window.scrollTo({ top: 0 }); });
       U.$$('[data-act]', el).forEach(b => b.onclick = () => Lab.reviewAct(b.dataset.act, m));
-      const st = U.$('#rvStart', el); if (st) st.onclick = () => { const focus = U.$('#rvF0', el).value.split(',').map(x => x.trim()).filter(Boolean); M.addReview({ matchId: m.id, focus }); vs.rvSec = 'coverage'; U.toast('Review started'); };
-      const del = U.$('#rvDel', el); if (del) del.onclick = () => { const n = M.wsFindings(rv.id).length; if (confirm(`Delete this match review${n ? ` and its ${n} finding${n === 1 ? '' : 's'}` : ''}? The match, its stats, coded events and clips stay in the shared library.`)) M.removeReview(rv.id); };
+      const st = U.$('#rvStart', el); if (st) st.onclick = () => { const focus = U.$('#rvF0', el).value.split(',').map(x => x.trim()).filter(Boolean); M.addReview({ matchId: m.id, focus }); vs.rvSec = 'coverage'; U.toast(Lab.isOpp() ? 'Analysis started' : 'Review started'); };
+      const del = U.$('#rvDel', el); if (del) del.onclick = () => { const n = Lab.isOpp() ? 0 : M.wsFindings(rv.id).length; if (confirm(`Delete this ${Lab.isOpp() ? 'match analysis (findings stay in the brief)' : 'match review'}${n ? ` and its ${n} finding${n === 1 ? '' : 's'}` : ''}? The match, its stats, coded events and clips stay in the shared library.`)) M.removeReview(rv.id); };
       U.$$('[data-rvdone]', el).forEach(c => c.onchange = () => M.updateReview(rv.id, { done: Object.assign({}, rv.done, { [c.dataset.rvdone]: c.checked }) }));
       const toRep = () => { vs.repScope = rv.id; vs.reportPreview = false; Lab.go('report'); };
       ['#rvRep', '#rvRep2'].forEach(id => { const b = U.$(id, el); if (b) b.onclick = toRep; });

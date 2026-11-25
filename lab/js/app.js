@@ -16,7 +16,7 @@
   const TABS_OPP = [
     { id: 'home', label: 'Home' },
     { grp: 'Opponent' }, { id: 'team', label: 'Team' }, { id: 'players', label: 'Players' },
-    { grp: 'Coding' }, { id: 'matches', label: 'Matches', sec: 'matches' }, { id: 'code', label: 'Code', sec: 'coding' }, { id: 'video', label: 'Video', sec: 'video' }, { id: 'explore', label: 'Explore', sec: 'coding' },
+    { grp: 'Their games' }, { id: 'matches', label: 'Matches', sec: 'matches' }, { id: 'review', label: 'Match analysis', sec: 'reviews' }, { id: 'code', label: 'Code', sec: 'coding' }, { id: 'video', label: 'Video', sec: 'video' }, { id: 'explore', label: 'Explore', sec: 'coding' },
     { grp: '' }, { id: 'findings', label: 'Findings', sec: 'findings' }, { id: 'report', label: 'Brief', sec: 'report' },
     { id: 'data', label: 'Data', right: true }
   ];
@@ -37,6 +37,7 @@
   ];
   const SECTIONS_OPP = [
     { id: 'matches', label: 'Matches', tab: 'matches' },
+    { id: 'reviews', label: 'Match analysis', tab: 'review', optional: true },
     { id: 'coding', label: 'Coded events', tab: 'code' },
     { id: 'video', label: 'Video & clips', tab: 'video' },
     { id: 'findings', label: 'Findings', tab: 'findings' },
@@ -53,7 +54,7 @@
     const fl = opp ? M.state.findings.filter(x => x.workspaceId === w.id) : tl.findings.filter(x => x.workspaceId === w.id);
     const facts = {
       matches: { n: ms.length, text: ms.length ? plural(ms.length, 'match') : 'No matches added' },
-      reviews: (() => { const r = tl.reviews.filter(x => x.workspaceId === w.id); return { n: r.length, text: r.length ? `${plural(r.length, 'match review')}` : 'No match reviews yet' }; })(),
+      reviews: (() => { const r = tl.reviews.filter(x => x.workspaceId === w.id); return { n: r.length, text: w.kind === 'opp' ? (r.length ? `${plural(r.length, 'game')} analysed` : 'No games analysed yet') : r.length ? `${plural(r.length, 'match review')}` : 'No match reviews yet' }; })(),
       coding: (() => { const ev = M.state.events.filter(e => ids.has(e.matchId)); const t = new Set(ev.map(e => e.templateId)).size; return { n: ev.length, text: ev.length ? `${ev.length} events, ${plural(t, 'template')}` : opp ? 'Nothing coded' : 'Nothing coded (optional)' }; })(),
       video: (() => { const v = ms.filter(m => (M.state.videos[m.id] || {}).url || (M.state.videos[m.id] || {}).fileName).length; const c = M.state.clips.filter(x => ids.has(x.matchId)).length; return { n: v + c, text: v || c ? `${plural(v, 'match video')}, ${plural(c, 'clip')}` : opp ? 'No video linked' : 'No video linked (optional)' }; })(),
       findings: { n: fl.length, text: fl.length ? `${plural(fl.length, 'finding')}${opp ? '' : `, ${fl.filter(x => x.followUp && x.followStatus !== 'Done').length} open follow-ups`}` : 'No findings yet' },
@@ -71,20 +72,20 @@
   Lab.doneToggle = secId => { const w = M.ws(); if (!w) return ''; const on = (w.done || {})[secId]; return `<label class="done-t"><input type="checkbox" data-done="${secId}" ${on ? 'checked' : ''}> Mark ${U.esc((sectionsFor(w).find(s => s.id === secId) || {}).label || '').toLowerCase()} complete</label>`; };
 
   /* ---------- workspace header ---------- */
-  Lab.wsLabel = w => w.kind === 'opp' ? `${w.ourTeam || 'Our team'} v ${w.opponent}${w.round ? ', ' + w.round : ''}${w.season ? ' ' + w.season : ''}` : `${w.team || 'Our team'}, ${[w.competition, w.season].filter(Boolean).join(' ')}`;
+  Lab.wsLabel = w => w.kind === 'opp' ? `${w.ourTeam ? w.ourTeam + ' v ' : ''}${w.opponent}${w.round ? ', ' + w.round : ''}${w.season ? ' ' + w.season : ''}` : `${w.team || 'Our team'}, ${[w.competition, w.season].filter(Boolean).join(' ')}`;
   function renderHead() {
     const w = M.ws(), el = U.$('#ws'), opp = Lab.isOpp();
     const list = M.workspaces(opp ? 'opp' : 'team');
     const modeSeg = `<div class="mode-seg" role="group" aria-label="Mode"><button class="${opp ? '' : 'on'}" data-mode="team" aria-pressed="${!opp}">Our team</button><button class="${opp ? 'on' : ''}" data-mode="opp" aria-pressed="${opp}">Opponent</button></div>`;
-    const pick = `<div class="ws-pick">${modeSeg}<label for="wsSel">${opp ? 'Fixture' : 'Team season'}</label><select id="wsSel"><option value="">${list.length ? (opp ? 'Choose a fixture…' : 'Choose a team season…') : (opp ? 'No fixtures yet' : 'No team seasons yet')}</option>${list.map(x => `<option value="${x.id}" ${w && x.id === w.id ? 'selected' : ''}>${U.esc(Lab.wsLabel(x))}</option>`).join('')}</select><button class="btn sm on-dark" id="wsNew">${opp ? '+ New fixture' : '+ New team season'}</button></div>`;
+    const pick = `<div class="ws-pick">${modeSeg}<label for="wsSel">${opp ? 'Opponent' : 'Team season'}</label><select id="wsSel"><option value="">${list.length ? (opp ? 'Choose an opponent…' : 'Choose a team season…') : (opp ? 'No opponents yet' : 'No team seasons yet')}</option>${list.map(x => `<option value="${x.id}" ${w && x.id === w.id ? 'selected' : ''}>${U.esc(Lab.wsLabel(x))}</option>`).join('')}</select><button class="btn sm on-dark" id="wsNew">${opp ? '+ New opponent' : '+ New team season'}</button></div>`;
     if (!w) {
       el.innerHTML = `<div><span class="dam-pin">Club Lab · Beta · ${opp ? 'Opponent' : 'Our team'}</span><h1>Club <em>Lab</em></h1><div class="ws-meta">${opp ? 'Scout the next opponent' : 'Review and code your own team'}</div>
-        <div class="ws-cov">${opp ? 'Create a fixture for your next game to see the opponent\'s team and player numbers, code their matches, cut vision and build the brief for coaches.' : 'Choose your club and season to see your own team and player numbers, review completed matches, code your own vision and build match reviews for coaches.'} Switch modes any time: matches, coding and clips are shared.</div></div>${pick}`;
+        <div class="ws-cov">${opp ? 'Pick the club you\'re playing to see their team and player numbers, analyse their games one by one, code and clip them, and build the brief for coaches.' : 'Choose your club and season to see your own team and player numbers, review completed matches, code your own vision and build match reviews for coaches.'} Switch modes any time: matches, coding and clips are shared.</div></div>${pick}`;
     } else {
       const st = sectionStatus(w);
       const meta = opp ? [w.competition, w.season, w.round ? 'Round ' + String(w.round).replace(/^r(ound)?\s*/i, '') : '', w.date, w.venue].filter(Boolean).map(U.esc).join(' · ') : [w.competition, w.season, w.note].filter(Boolean).map(U.esc).join(' · ');
-      const title = opp ? `${U.esc(w.ourTeam || 'Our team')} v <em>${U.esc(w.opponent)}</em>` : `${U.esc(w.team || 'Our team')} <em>${U.esc(w.season || '')}</em>`;
-      el.innerHTML = `<div><span class="dam-pin">Club Lab · Beta · ${opp ? 'Opponent · next fixture' : 'Our team'}</span><h1>${title}</h1><div class="ws-meta">${meta || 'Details not entered'}</div>
+      const title = opp ? (w.ourTeam ? `${U.esc(w.ourTeam)} v <em>${U.esc(w.opponent)}</em>` : `<em>${U.esc(w.opponent)}</em>`) : `${U.esc(w.team || 'Our team')} <em>${U.esc(w.season || '')}</em>`;
+      el.innerHTML = `<div><span class="dam-pin">Club Lab · Beta · ${opp ? 'Opponent' : 'Our team'}</span><h1>${title}</h1><div class="ws-meta">${meta || 'Details not entered'}</div>
         <div class="ws-strip"><button class="wss wss-go" data-go="team">Team data</button><button class="wss wss-go" data-go="players">Player data</button>${sectionsFor(w).map(s => `<button class="wss wss-${st[s.id].state}" data-go="${s.tab}" data-tip="${U.esc(`<b>${s.label}</b><br>${st[s.id].text}`)}"><i></i>${s.label}</button>`).join('')}</div></div>${pick}`;
     }
     U.$('#wsSel').onchange = e => { M.selectWorkspace(e.target.value); go(e.target.value ? (current === 'home' ? 'team' : current) : 'home'); };
@@ -97,7 +98,7 @@
   function renderTabs() {
     const hasWs = !!M.ws();
     U.$('#tabs').innerHTML = TABS().map(t => t.grp != null ? `<span class="sep" aria-hidden="true"></span>${t.grp ? `<span class="tgrp">${t.grp}</span>` : ''}` :
-      `<button role="tab" aria-selected="${t.id === current}" data-tab="${t.id}" class="${t.right ? 'tright' : ''}" ${NEEDS_WS.includes(t.id) && !hasWs ? `disabled data-tip="Choose ${Lab.isOpp() ? 'a fixture' : 'a team season'} first"` : ''}>${t.label}</button>`).join('');
+      `<button role="tab" aria-selected="${t.id === current}" data-tab="${t.id}" class="${t.right ? 'tright' : ''}" ${NEEDS_WS.includes(t.id) && !hasWs ? `disabled data-tip="Choose ${Lab.isOpp() ? 'an opponent' : 'a team season'} first"` : ''}>${t.label}</button>`).join('');
     U.$$('#tabs button').forEach(b => b.onclick = () => go(b.dataset.tab));
   }
 
@@ -163,26 +164,41 @@
     });
   };
 
-  /* Opponent fixture form (same fields as Opponent Lab). */
+  /* Opponent form: pick the competition, season and opponent, the same way as our team season.
+     Next-game details are optional (they show on the brief). */
   function oppForm(w) {
-    const teams = [...new Set(Object.values(Lab.Packs || {}).flatMap(x => x.teams).concat(M.teams()))].sort();
     const tw = M.workspaces('team').find(x => x.id === M.tl.workspaceId);
-    Lab.openDrawer(`<div class="drawer-h"><div><span class="k">${w ? 'Edit fixture' : 'New fixture'}</span><h2 id="drawerTitle">${w ? U.esc(Lab.wsLabel(w)) : 'Upcoming game'}</h2></div><button class="btn sm" data-close>Cancel</button></div>
+    const teamsFor = comp => [...new Set(Object.values(Lab.Packs || {}).filter(p => p.raw.competition === comp).flatMap(p => p.teams).concat(M.teams()))].sort();
+    const comp0 = w ? w.competition : (tw ? tw.competition : 'VFL');
+    Lab.openDrawer(`<div class="drawer-h"><div><span class="k">${w ? 'Edit opponent' : 'New opponent'}</span><h2 id="drawerTitle">${w ? U.esc(Lab.wsLabel(w)) : 'Who are you playing?'}</h2></div><button class="btn sm" data-close>Cancel</button></div>
       <div class="drawer-b"><div class="form">
-        <label>Our club<input id="fOur" list="fTeams" value="${U.esc(w ? w.ourTeam : (tw ? tw.team : ''))}" placeholder="Your club"></label>
-        <label>Opponent *<input id="fOpp" list="fTeams" value="${U.esc(w ? w.opponent : '')}" placeholder="Club you are preparing for"></label>
-        <datalist id="fTeams">${teams.map(t => `<option value="${U.esc(t)}">`).join('')}</datalist>
-        <label>Competition<select id="fComp">${Lab.Library.COMPETITIONS.map(c => `<option ${c === (w ? w.competition : (tw ? tw.competition : 'AFL')) ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
-        <label>Season<input id="fSeason" value="${U.esc(w ? w.season : (tw ? tw.season : String(new Date().getFullYear())))}"></label>
-        <label>Round<input id="fRound" value="${U.esc(w ? w.round : '')}" placeholder="e.g. R1, QF"></label>
-        <label>Match date<input id="fDate" type="date" value="${U.esc(w ? w.date : '')}"></label>
-        <label class="full">Venue<input id="fVenue" value="${U.esc(w ? w.venue : '')}"></label>
-        <label class="full">Note for staff<input id="fNote" value="${U.esc(w ? w.note : '')}" placeholder="optional"></label>
+        <label>Competition<select id="fComp">${Lab.Library.COMPETITIONS.map(c => `<option ${c === comp0 ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
+        <label>Season<input id="fSeason" value="${U.esc(w ? w.season : (tw ? tw.season : String(new Date().getFullYear())))}" inputmode="numeric"></label>
+        <label class="full">Opponent *<input id="fOpp" list="fTeams" value="${U.esc(w ? w.opponent : '')}" placeholder="The club you are playing"></label>
+        <label class="full">Our club<input id="fOur" list="fTeams" value="${U.esc(w ? w.ourTeam : (tw ? tw.team : ''))}" placeholder="Your club (optional)"></label>
+        <datalist id="fTeams"></datalist>
       </div>
-      <div class="ctl" style="margin-top:12px"><button class="btn g" id="fSave">${w ? 'Save fixture' : 'Create fixture'}</button></div><div id="fErr" class="warnline hidden"></div></div>`, d => {
+      <p class="sub" id="fHint" style="margin-top:8px"></p>
+      <details style="margin-top:10px" ${w && (w.round || w.date || w.venue) ? 'open' : ''}><summary>Next game against them (optional)</summary>
+        <div class="form" style="margin-top:8px">
+          <label>Round<input id="fRound" value="${U.esc(w ? w.round : '')}" placeholder="e.g. R1, QF"></label>
+          <label>Match date<input id="fDate" type="date" value="${U.esc(w ? w.date : '')}"></label>
+          <label class="full">Venue<input id="fVenue" value="${U.esc(w ? w.venue : '')}"></label>
+        </div></details>
+      <div class="form" style="margin-top:10px"><label class="full">Note for staff<input id="fNote" value="${U.esc(w ? w.note : '')}" placeholder="optional"></label></div>
+      <div class="ctl" style="margin-top:12px"><button class="btn g" id="fSave">${w ? 'Save' : 'Create opponent'}</button></div><div id="fErr" class="warnline hidden"></div></div>`, d => {
+      const hint = () => {
+        const comp = U.$('#fComp', d).value, season = U.$('#fSeason', d).value.trim();
+        U.$('#fTeams', d).innerHTML = teamsFor(comp).map(t => `<option value="${U.esc(t)}">`).join('');
+        const X = Lab.packFor({ competition: comp, season });
+        U.$('#fHint', d).textContent = X && X.raw.season === season
+          ? `${comp} ${season} season data is built in: pick the opponent from the list so their results, team stats, players and games load. Then add the games you want to analyse in Matches.`
+          : `No built-in ${comp} ${season} season data. You can still add their matches, import stats and code.`;
+      };
+      U.$('#fComp', d).onchange = hint; U.$('#fSeason', d).oninput = hint; hint();
       U.$('#fSave', d).onclick = () => {
         const v = { ourTeam: U.$('#fOur', d).value.trim(), opponent: U.$('#fOpp', d).value.trim(), competition: U.$('#fComp', d).value, season: U.$('#fSeason', d).value.trim(), round: U.$('#fRound', d).value.trim(), date: U.$('#fDate', d).value, venue: U.$('#fVenue', d).value.trim(), note: U.$('#fNote', d).value.trim() };
-        if (!v.opponent) { const e = U.$('#fErr', d); e.textContent = 'Opponent is required.'; e.classList.remove('hidden'); return; }
+        if (!v.opponent) { const e = U.$('#fErr', d); e.textContent = 'Choose the opponent.'; e.classList.remove('hidden'); return; }
         const X = Lab.packFor(v); if (X) { if (X.resolve(v.opponent)) v.opponent = X.resolve(v.opponent); if (v.ourTeam && X.resolve(v.ourTeam)) v.ourTeam = X.resolve(v.ourTeam); }
         if (w) { M.updateWorkspace(w.id, v); synced.clear(); } else { M.addWorkspace(v, 'opp'); go('team'); }
         Lab.closeDrawer();

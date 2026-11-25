@@ -64,8 +64,8 @@
       <td class="l">${m.home === team ? 'v' : '@'} ${U.esc(opp)}</td><td class="l">${U.esc(m.venue) || '<span class="muted">–</span>'}</td>
       <td class="l">${m.homeScore || m.awayScore ? U.esc((m.homeScore || '?') + ' – ' + (m.awayScore || '?')) : `<span class="muted">${future ? 'not played yet' : 'not entered'}</span>`}${r ? ` <span class="res res-${r.res}">${r.res[0]} ${U.signed(r.margin)}</span>` : ''}</td>
       <td class="l">${cov}${u.events ? `<span class="cov on" data-tip="${u.events} coded events">${u.events} ev</span>` : ''}${vid.url || vid.fileName ? '<span class="cov on" data-tip="Video linked">Video</span>' : ''}</td>
-      ${Lab.isOpp() ? '' : `<td class="l">${rv ? `<span class="st st-progress">Review started</span>` : '<span class="muted">–</span>'}</td>`}
-      <td class="l">${Lab.isOpp() ? '' : `<button class="btn sm g" data-rv="${m.id}">${rv ? 'Open review' : 'Review'}</button> `}<button class="btn sm" data-edit="${m.id}">Edit</button> <button class="btn sm" data-lu="${m.id}">Lineups</button> <button class="btn sm danger" data-del="${m.id}">Delete</button></td></tr>`;
+      <td class="l">${rv ? `<span class="st st-progress">${Lab.isOpp() ? 'Analysis started' : 'Review started'}</span>` : '<span class="muted">–</span>'}</td>
+      <td class="l"><button class="btn sm g" data-rv="${m.id}">${Lab.isOpp() ? (rv ? 'Open analysis' : 'Analyse') : (rv ? 'Open review' : 'Review')}</button> <button class="btn sm" data-edit="${m.id}">Edit</button> <button class="btn sm" data-lu="${m.id}">Lineups</button> <button class="btn sm danger" data-del="${m.id}">Delete</button></td></tr>`;
   }
 
   /* Add our games from the season results, scores and all. */
@@ -95,11 +95,11 @@
   Lab.Views.matches = {
     render(el, { ws }) {
       const all = M.sortMatches(M.state.matches.filter(m => M.involves(m, ws.focus)));
-      const head = `<thead><tr><th>Use</th><th class="l">Round</th><th class="l">Date</th><th class="l">Opponent</th><th class="l">Venue</th><th class="l">Score</th><th class="l">Data</th>${Lab.isOpp() ? '' : '<th class="l">Review</th>'}<th></th></tr></thead>`;
+      const head = `<thead><tr><th>Use</th><th class="l">Round</th><th class="l">Date</th><th class="l">Opponent</th><th class="l">Venue</th><th class="l">Score</th><th class="l">Data</th><th class="l">${Lab.isOpp() ? 'Analysis' : 'Review'}</th><th></th></tr></thead>`;
       const X = Lab.Pack, packTeam = X && X.ok ? X.resolve(ws.focus) : '';
       el.innerHTML = `
       <section class="card">
-        <div class="card-h"><div><h2>${Lab.isOpp() ? 'Matches to review' : 'Our matches'}</h2><p>${Lab.isOpp() ? `${U.esc(ws.focus)} games you're coding. Untick a game to leave it out without deleting it.` : `${U.esc(ws.focus)} games you're reviewing or coding. Untick a game to leave it out of season charts without deleting it. <b>Review</b> opens the post-match review for that game.`}</p></div>
+        <div class="card-h"><div><h2>${Lab.isOpp() ? `${U.esc(ws.focus)} games` : 'Our matches'}</h2><p>${Lab.isOpp() ? `${U.esc(ws.focus)} games you're analysing. <b>Analyse</b> opens that game's team and player stats, then code it, add findings and build the brief. Untick a game to leave it out without deleting it.` : `${U.esc(ws.focus)} games you're reviewing or coding. Untick a game to leave it out of season charts without deleting it. <b>Review</b> opens the post-match review for that game.`}</p></div>
           <div class="ctl">${packTeam ? '<button class="btn g" id="addPack">+ Add from season results</button>' : ''}<button class="btn" id="addOpp">+ Add match manually</button></div></div>
         ${all.length ? `<div class="tw"><table class="compact">${head}<tbody>${all.map(m => row(m, ws)).join('')}</tbody></table></div>
           <p class="sub">Data: <span class="cov on">Stats</span> team match stats · <span class="cov on">Players</span> player match stats · <span class="cov">grey</span> = not available for that match.</p>`

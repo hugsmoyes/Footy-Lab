@@ -85,6 +85,7 @@
       state.findings = state.findings.filter(x => x.workspaceId !== id);
       state.playlists = state.playlists.filter(x => x.workspaceId !== id);
       if (tl.oppId === id) tl.oppId = '';
+      tl.reviews = tl.reviews.filter(x => x.workspaceId !== id);
       if (state.workspaceId === id) state.workspaceId = '';
     } else {
       tl.workspaces = tl.workspaces.filter(x => x.id !== id);
@@ -311,11 +312,12 @@
   function removePlaylist(id) { tl.playlists = tl.playlists.filter(p => p.id !== id); state.playlists = state.playlists.filter(p => p.id !== id); emit('playlists'); }
 
   /* ---------- match reviews (one per completed match in a team season) ---------- */
-  function reviews() { return mode() === 'opp' ? [] : tl.reviews.filter(r => r.workspaceId === tl.workspaceId); }
+  /* Match reviews belong to a workspace: our team's season, or an opponent (analysing their games). */
+  function reviews() { const w = ws(); return w ? tl.reviews.filter(r => r.workspaceId === w.id) : []; }
   function review(id) { return tl.reviews.find(r => r.id === id) || null; }
-  function reviewFor(matchId) { return mode() === 'opp' ? null : reviews().find(r => r.matchId === matchId) || null; }
+  function reviewFor(matchId) { return reviews().find(r => r.matchId === matchId) || null; }
   function addReview(r) {
-    const x = Object.assign({ id: U.uid('rv'), workspaceId: tl.workspaceId, createdAt: new Date().toISOString(), matchId: '', quarters: null, focus: [], note: '', keyStats: null, done: {}, report: { title: '', intro: '' } }, r);
+    const x = Object.assign({ id: U.uid('rv'), workspaceId: curId(), createdAt: new Date().toISOString(), matchId: '', quarters: null, focus: [], note: '', keyStats: null, done: {}, report: { title: '', intro: '' } }, r);
     tl.reviews.push(x); emit('reviews'); return x;
   }
   function updateReview(id, patch) { const r = review(id); if (r) { Object.assign(r, patch); emit('reviews'); } }
@@ -340,7 +342,7 @@
   const fstore = () => mode() === 'opp' ? state.findings : tl.findings;
   function wsFindings(reviewId) {
     const id = curId();
-    if (mode() === 'opp') return state.findings.filter(f => f.workspaceId === id);
+    if (mode() === 'opp') { const r = reviewId && review(reviewId); return state.findings.filter(f => f.workspaceId === id && (!r || (f.matchIds || []).includes(r.matchId))); }
     return tl.findings.filter(f => f.workspaceId === id && (reviewId === undefined || ((f.reviewId || '') === reviewId && (reviewId !== '' || !f.week))));
   }
   /* The match week a team finding belongs to: a match id, or '' for a season finding. */
