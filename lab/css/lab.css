@@ -361,7 +361,7 @@ svg.chart{display:block;width:100%;height:auto;overflow:visible}
 .chart-empty svg{width:140px;flex:none}
 .chart-empty b{font-weight:650}.chart-empty p{margin:3px 0 0;font-size:12.5px;color:var(--muted)}
 .chart-empty .need{font:500 10.5px var(--f-mono);color:var(--warn);text-transform:uppercase;letter-spacing:.04em}
-.hb{grid-template-columns:minmax(90px,190px) 1fr 120px}
+.hb{grid-template-columns:minmax(70px,190px) minmax(60px,1fr) minmax(28px,auto)}
 .hb.click{cursor:pointer}
 .hb-t{position:relative}
 .hb-t .ci{position:absolute;top:5px;height:4px;background:rgba(20,20,20,.35);border-radius:2px}
